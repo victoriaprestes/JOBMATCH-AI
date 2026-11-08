@@ -257,13 +257,15 @@ def empregare():
         ("Cidade", "Pinhais"),
         ("Cidade", "Araucária"),
         ("Cidade", "Campo Largo"),
-        ("Modalidade", "Presencial"),
-        ("Modalidade", "Híbrido"),
+        ("Modalidade", "presencial"),
+        ("Modalidade", "hibrido"),
+        ("Regime", "CLT"),
     ]
     # Remoto: API filtrada por país, não por localização global.
     remote_params = [
         ("Pais", "Brasil"),
-        ("Modalidade", "Remoto"),
+        ("Modalidade", "remoto"),
+        ("Regime", "CLT"),
     ]
     for mode, params in (("Local", local_params), ("Remoto", remote_params)):
         for item in fetch_empregare_pages(params):
@@ -304,7 +306,7 @@ def empregare():
             jobs.append(make_job(
                 "Empregare", item, title, item.get("empresa"), location, description,
                 url, item.get("data") or item.get("timestamp"), item.get("id"),
-                salary, mode_hint == "Remoto", item.get("regime"), mode_hint,
+                salary, mode_hint == "Remoto", "CLT (filtro da fonte)", mode_hint,
             ))
     return jobs
 
