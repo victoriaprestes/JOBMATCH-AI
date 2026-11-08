@@ -155,3 +155,11 @@ def test_extract_benefits_when_gupy_removes_spaces_between_headings():
     assert "zenklub" in result
     assert "salário:" not in result
     assert "curitiba" not in result
+
+
+def test_freshness_window_default_and_extended():
+    # Datas de referência fixas para não depender do relógio da máquina.
+    assert is_fresh_posting("2026-11-06T12:00:00Z", max_age_days=7)
+    assert not is_fresh_posting("2026-10-31T12:00:00Z", max_age_days=7)
+    assert is_fresh_posting("2026-10-31T12:00:00Z", max_age_days=45)
+    assert not is_fresh_posting(None, max_age_days=45)
