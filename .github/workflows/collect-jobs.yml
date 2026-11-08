@@ -35,7 +35,9 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install pytest
       - name: Testar filtros e compatibilidade
-        run: python -m pytest -q
+        run: |
+          python -m pytest -q
+          python -m py_compile app.py collect_jobs.py src/matcher.py
       - name: Coletar vagas
         run: python collect_jobs.py
       - name: Salvar feed atualizado
