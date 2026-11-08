@@ -1,7 +1,7 @@
-"""Coleta vagas de feeds públicos com filtros conservadores para o perfil-alvo.
+"""Coleta vagas de entrada com contratação explicitamente confirmada no Brasil.
 
-Não presume que "Worldwide" significa contratação confirmada no Brasil.
-Salários estrangeiros são normalizados apenas quando a moeda e o período são identificáveis.
+Fontes usadas nesta versão são feeds públicos. A cobertura não equivale a uma busca
+exaustiva em LinkedIn, Gupy, Indeed ou em páginas de carreiras de todas as empresas.
 """
 import html
 import json
@@ -14,34 +14,51 @@ import requests
 
 OUT = Path("data/jobs_feed.json")
 TIMEOUT = 25
-HEADERS = {"User-Agent": "JobMatchAI/0.2 (+https://github.com/victoriaprestes/JOBMATCH-AI)"}
+HEADERS = {"User-Agent": "JobMatchAI/0.3 (+https://github.com/victoriaprestes/JOBMATCH-AI)"}
 
-# Busca por cargo/título, não por palavras soltas em qualquer trecho da descrição.
-ROLE_PATTERNS = [
-    r"\b(analista|analyst)\b.*\b(operac|operation|business|process|processo|administr|projeto|project|pmo|dados|data|bi|report|planejamento|planning|compras|procurement|supply chain|suprimentos|sistemas|systems|negocios|negócios)\b",
-    r"\b(business|operations|process|administrative|project|data|bi|reporting|procurement|purchasing|supply chain|systems|planning)\b.*\b(analyst|coordinator|coordenador|coordenadora|assistant|assistente|specialist|especialista|associate|consultant)\b",
-    r"\b(assistente|assistant|coordenador|coordenadora|coordinator)\b.*\b(administrativ|operac|operation|projeto|project|pmo|diretoria|executive|process|processo)\b",
-    r"\b(executive assistant|assistente executiv[oa]|office coordinator|project coordinator|coordenador[ao] de projetos)\b",
-    r"\b(data analyst|analista de dados|bi analyst|analista de bi|business intelligence analyst|reporting analyst)\b",
-    r"\b(business analyst|analista de negocios|analista de negócios|it business analyst|systems analyst|analista de sistemas)\b",
-    r"\b(pmo analyst|analista de pmo|project analyst|analista de projetos|process analyst|analista de processos)\b",
+# Cargos compatíveis com a experiência já demonstrada.
+PROFILE_ROLE_PATTERNS = [
+    r"\bassistente\s+(administrativ[oa]|executiv[oa]|de\s+diretoria|de\s+operacoes|de\s+operações|de\s+processos|de\s+projetos|de\s+compras|de\s+suprimentos|de\s+facilities|financeir[oa]|de\s+back\s*office)\b",
+    r"\b(auxiliar\s+administrativ[oa]|secretari[oa]\s+executiv[oa]|executive\s+assistant|administrative\s+assistant|operations\s+assistant|office\s+assistant|office\s+coordinator)\b",
+    r"\b(back\s*office\s+(assistant|associate|analyst)|procurement\s+assistant|purchasing\s+assistant|facilities\s+assistant|project\s+assistant|pmo\s+assistant)\b",
+    r"\b(analista|analyst)\s+(administrativ[oa]|de\s+operacoes|de\s+operações|de\s+processos|de\s+projetos|de\s+compras|de\s+suprimentos|de\s+planejamento|de\s+negocios|de\s+negócios|de\s+back\s*office)\b",
+    r"\b(administrative|business\s+operations|operations|process|project|procurement|purchasing)\s+(assistant|associate|analyst)\b",
+    r"\b(assistente|assistant)\s+de\s+gestao\b",
+    r"\b(management\s+assistant|management\s+trainee|project\s+coordinator\s+assistant)\b",
+]
+
+# Cargos que podem ser uma trilha de transição/estudo. Não são tratados como
+# experiência já adquirida: a interface os identifica separadamente.
+TRANSITION_ROLE_PATTERNS = [
+    r"\b(assistente|auxiliar|analista\s+(junior|jr\.?|i)|junior\s+analyst|entry.level\s+analyst)\s+(de\s+)?(governanca|governance|governanca\s+de\s+ti|it\s+governance|controles\s+internos|internal\s+controls|riscos|risk|compliance|auditoria|audit)\b",
+    r"\b(governance|it\s+governance|internal\s+controls|risk|compliance|audit)\s+(assistant|associate|analyst\s+(i|junior|jr\.?))\b",
+    r"\b(assistente|auxiliar|analista\s+(junior|jr\.?|i))\s+(de\s+)?(operacoes\s+de\s+ti|operações\s+de\s+ti|it\s+operations|infraestrutura\s+de\s+ti|servicos\s+de\s+ti|serviços\s+de\s+ti|gestao\s+de\s+servicos|gestão\s+de\s+serviços|gestao\s+de\s+ti|gestão\s+de\s+ti)\b",
+    r"\b(it\s+operations|it\s+service\s+management|itsm|service\s+management|service\s+delivery|it\s+governance)\s+(assistant|associate|analyst\s+(i|junior|jr\.?))\b",
+    r"\b(assistente|auxiliar)\s+(de\s+)?(pmo|projetos\s+de\s+ti|gestao\s+de\s+projetos|gestão\s+de\s+projetos)\b",
+    r"\b(pmo|project\s+management\s+office)\s+(assistant|coordinator\s+assistant|analyst\s+(i|junior|jr\.?))\b",
+    r"\b(assistente|auxiliar)\s+(de\s+)?(processos|melhoria\s+continua|melhoria\s+contínua|qualidade|controles)\b",
+    r"\b(analista\s+(junior|jr\.?|i)|junior\s+analyst)\s+(de\s+)?(processos|melhoria\s+continua|melhoria\s+contínua|qualidade|controles|governanca|governance)\b",
 ]
 
 SENIOR_TITLE = re.compile(
-    r"\b(senior|sr\.?|sênior|lead|principal|director|diretor|diretora|head|manager|gerente|"
-    r"staff|iii|iv|chief|vp|vice president)\b",
-    re.I,
+    r"\b(senior|sr\.?|sênior|pleno|mid.level|lead|principal|director|diretor|diretora|head|manager|gerente|"
+    r"staff|iii|iv|chief|vp|vice president|especialista|specialist)\b", re.I
 )
-EXCLUDE_TITLE = re.compile(
-    r"\b(developer|desenvolvedor|engineer|engenheiro|writer|copywriter|"
-    r"sales|vendas|inside sales|recruiter|recrutador|designer|"
-    r"tier\s*[23]|service desk|help desk|customer support|video annotation)\b",
-    re.I,
+EXCLUDED_TITLE = re.compile(
+    r"\b(developer|desenvolvedor|engineer|engenheiro|data analyst|analista de dados|"
+    r"sales|vendas|inside sales|recruiter|recrutador|designer|customer support|"
+    r"service desk|help desk|tier\s*[23]|video annotation|estagio|estágio)\b", re.I
 )
 
-BRAZIL = ("brazil", "brasil", "curitiba", "parana", "paraná", "sao paulo", "são paulo")
-LATAM = ("latin america", "latam", "south america")
-GLOBAL = ("worldwide", "anywhere", "americas", "remote - global", "global")
+BRAZIL_TERMS = (
+    "brazil", "brasil", "curitiba", "colombo", "sao jose dos pinhais",
+    "são josé dos pinhais", "pinhais", "araucaria", "araucária",
+    "campo largo", "almirante tamandare", "almirante tamandaré",
+)
+GLOBAL_ONLY = ("worldwide", "anywhere", "global", "latin america", "latam", "south america", "americas")
+REMOTE_WORDS = ("remote", "remoto", "work from home", "home office")
+HYBRID_WORDS = ("hybrid", "hibrido", "híbrido")
+ONSITE_WORDS = ("on-site", "onsite", "presencial", "in person")
 
 def normalize(value):
     value = unicodedata.normalize("NFKD", str(value or "").lower())
@@ -51,205 +68,175 @@ def clean(value):
     value = re.sub(r"<[^>]+>", " ", str(value or ""))
     return re.sub(r"\s+", " ", html.unescape(value)).strip()
 
-def is_target_role(title):
-    title_n = normalize(title)
-    if SENIOR_TITLE.search(title_n) or EXCLUDE_TITLE.search(title_n):
-        return False
-    return any(re.search(pattern, title_n, re.I) for pattern in ROLE_PATTERNS)
-
-def classify_location(location, source=""):
+def classify_location(location):
     loc = normalize(location)
-    if any(term in loc for term in BRAZIL):
-        return "Brasil indicado", "Brasil indicado no anúncio"
-    if any(term in loc for term in LATAM):
-        return "América Latina — confirmar", "Região indicada; confirmar contratação no Brasil"
-    if any(term in loc for term in GLOBAL):
-        return "Global — confirmar", "Anúncio global; contratação no Brasil não confirmada"
-    return "Não confirmado", "Localização não confirma elegibilidade no Brasil"
+    if any(term in loc for term in map(normalize, BRAZIL_TERMS)):
+        if "curitiba" in loc or any(x in loc for x in ("colombo", "sao jose dos pinhais", "pinhais", "araucaria", "campo largo", "almirante tamandare")):
+            return "Brasil confirmado", "Curitiba ou região metropolitana indicada no anúncio"
+        return "Brasil confirmado", "Brasil indicado explicitamente no anúncio"
+    # Remote/Worldwide sem país não prova que a empresa contrata no Brasil.
+    if any(term in loc for term in GLOBAL_ONLY):
+        return "Não elegível", "Região ampla/global; contratação no Brasil não confirmada"
+    return "Não elegível", "O anúncio não confirma contratação no Brasil"
+
+def classify_mode(location, remote_flag=None):
+    loc = normalize(location)
+    if any(x in loc for x in HYBRID_WORDS):
+        return "Híbrido"
+    if remote_flag is True or any(x in loc for x in REMOTE_WORDS):
+        return "Remoto"
+    if any(x in loc for x in ONSITE_WORDS) or any(x in loc for x in map(normalize, BRAZIL_TERMS)):
+        return "Presencial"
+    return "Não informado"
+
+def is_entry_level(title, description):
+    title_n = normalize(title)
+    desc_n = normalize(clean(description))
+    if SENIOR_TITLE.search(title_n) or EXCLUDED_TITLE.search(title_n):
+        return False
+    # Assistente/auxiliar/trainee são cargos de entrada por nomenclatura.
+    if re.search(r"\b(assistente|assistant|auxiliar|trainee|aprendiz|intern|estagiari[oa])\b", title_n):
+        return True
+    # Analista/coordenador só entra se houver marcador explícito de início de carreira.
+    entry_marker = re.search(
+        r"\b(junior|jr\.?|entry.level|entry level|early career|analista i|analyst i|"
+        r"0\s*(a|to|-)\s*2\s+anos?|1\s*(a|to|-)\s*2\s+anos?|"
+        r"no experience required|sem experiencia|experiencia de ate 2 anos|"
+        r"up to 2 years|0-2 years|1-2 years)\b", title_n + " " + desc_n
+    )
+    if not entry_marker:
+        return False
+    # Rejeita exigência explícita superior a 2 anos.
+    if re.search(r"\b([3-9]|[1-9][0-9])\s*\+?\s*(years?|anos?)\b", desc_n):
+        return False
+    if re.search(r"\b(minimum|at least|required|exige|exigimos|minimo|minimo de)\s+([3-9]|[1-9][0-9])\s*(years?|anos?)\b", desc_n):
+        return False
+    return True
+
+def classify_role(title):
+    title_n = normalize(title)
+    if any(re.search(p, title_n, re.I) for p in PROFILE_ROLE_PATTERNS):
+        return "Perfil atual", "Experiência administrativa, financeira e operacional já demonstrada"
+    if any(re.search(p, title_n, re.I) for p in TRANSITION_ROLE_PATTERNS):
+        return "Trilha de transição", "Área de governança/IT Operations/gestão para desenvolver com estudo"
+    return None, None
 
 def request_json(url, params=None):
     response = requests.get(url, params=params, timeout=TIMEOUT, headers=HEADERS)
     response.raise_for_status()
     return response.json()
 
-def parse_salary(label, fx_rates=None, default_currency=None, default_period=None):
-    """Retorna estimativa mensal bruta na moeda original e em BRL, quando possível."""
+def parse_brl_salary(label):
     raw = clean(label)
-    if not raw:
-        return {
-            "salary": 0, "salary_currency": None, "salary_period": None,
-            "salary_min_monthly": None, "salary_max_monthly": None,
-            "salary_brl_monthly_estimate": None, "salary_note": "Não informado",
-        }
+    if not raw or not re.search(r"(r\$|brl|reais)", normalize(raw)):
+        return None, None, "Salário não informado em reais"
+    text = normalize(raw).replace(".", "").replace(",", ".")
+    values = re.findall(r"(\d+(?:\.\d+)?)\s*([kK])?", text)
+    nums = [float(n) * (1000 if suffix else 1) for n, suffix in values]
+    if not nums:
+        return None, None, "Conferir remuneração no anúncio"
+    low = min(nums[:2])
+    high = max(nums[:2]) if len(nums) > 1 else nums[0]
+    if re.search(r"(ano|anual|year)", text):
+        low, high = low / 12, high / 12
+    return round(low), round(high), "Faixa bruta mensal estimada em reais; conferir periodicidade"
 
-    text = normalize(raw)
-    currency = default_currency
-    if "r$" in raw.lower() or "brl" in text or "reais" in text:
-        currency = "BRL"
-    elif "€" in raw or "eur" in text:
-        currency = "EUR"
-    elif "£" in raw or "gbp" in text:
-        currency = "GBP"
-    elif "$" in raw or "usd" in text:
-        currency = "USD"
-
-    period = default_period
-    if any(x in text for x in ("/hour", "per hour", "hourly", "por hora", "hour")):
-        period = "hour"
-    elif any(x in text for x in ("/month", "per month", "monthly", "por mes", "mensal", "month")):
-        period = "month"
-    elif any(x in text for x in ("/year", "per year", "annual", "annually", "yearly", "anual", "year")):
-        period = "year"
-
-    # Reconhece números como 3.5k, 35,3k, 3000 e faixas.
-    nums = re.findall(r"(?<![A-Za-z])(\d+(?:[.,]\d+)?)\s*([kK])?", raw)
-    values = []
-    for number, suffix in nums:
-        value = float(number.replace(",", "."))
-        if suffix:
-            value *= 1000
-        values.append(value)
-    if not values or currency is None or period is None:
-        return {
-            "salary": 0, "salary_currency": currency, "salary_period": period,
-            "salary_min_monthly": None, "salary_max_monthly": None,
-            "salary_brl_monthly_estimate": None,
-            "salary_note": "Remuneração não normalizada; conferir anúncio original",
-        }
-
-    low, high = min(values[:2]), max(values[:2]) if len(values) > 1 else values[0]
-    divisor = 160 if period == "hour" else (12 if period == "year" else 1)
-    low_monthly, high_monthly = low / divisor, high / divisor
-    rate = 1.0 if currency == "BRL" else (fx_rates or {}).get(currency)
-    brl = ((low_monthly + high_monthly) / 2 * rate) if rate else None
-    note = "Estimativa mensal bruta"
-    if period == "hour":
-        note += " (160 h/mês)"
-    if currency != "BRL":
-        note += "; conversão cambial estimada" if rate else "; sem conversão cambial"
-    return {
-        "salary": round(brl) if brl is not None else 0,
-        "salary_currency": currency,
-        "salary_period": period,
-        "salary_min_monthly": round(low_monthly, 2),
-        "salary_max_monthly": round(high_monthly, 2),
-        "salary_brl_monthly_estimate": round(brl, 2) if brl is not None else None,
-        "salary_note": note,
-    }
-
-def get_fx_rates():
-    try:
-        data = request_json("https://api.frankfurter.dev/v1/latest", {"base": "USD", "symbols": "BRL,EUR,GBP"})
-        usd_brl = data.get("rates", {}).get("BRL")
-        if not usd_brl:
-            return {}
-        return {
-            "USD": float(usd_brl),
-            "EUR": float(usd_brl) / float(data["rates"]["EUR"]),
-            "GBP": float(usd_brl) / float(data["rates"]["GBP"]),
-        }
-    except Exception:
-        # A coleta continua; salários em moeda estrangeira ficam sem conversão.
-        return {}
-
-def make_job(source, company, title, location, description, url, published, external_id,
-             salary_label=None, work_mode="Remoto", employment_type="Não informado",
-             fx_rates=None, default_currency=None, default_period=None):
-    location_status, eligibility_note = classify_location(location, source)
-    salary_data = parse_salary(salary_label, fx_rates, default_currency, default_period)
+def make_job(source, item, title, company, location, description, url, published, external_id,
+             salary_label=None, remote_flag=None, employment_type=None):
+    role_group, role_note = classify_role(title)
+    mode = classify_mode(location, remote_flag)
+    salary_min, salary_max, salary_note = parse_brl_salary(salary_label)
     return {
         "source": source,
-        "company": company or "Não informada",
+        "company": company or "Empresa não informada",
         "title": title,
-        "location": location or "Não informada",
-        "work_mode": work_mode,
-        "employment_type": employment_type,
-        **salary_data,
+        "location": location,
+        "work_mode": mode,
+        "employment_type": employment_type or "Não informado",
         "salary_label": salary_label or "Não informado",
-        "eligibility_status": location_status,
-        "eligibility_note": eligibility_note,
+        "salary_min_brl_monthly": salary_min,
+        "salary_max_brl_monthly": salary_max,
+        "salary_note": salary_note,
+        "eligibility_status": "Brasil confirmado",
+        "eligibility_note": classify_location(location)[1],
+        "role_group": role_group,
+        "role_note": role_note,
         "url": url or "",
         "description": clean(description),
         "published_at": published,
         "external_id": str(external_id or url or title),
     }
 
-def remotive(fx_rates):
+def keep_job(title, location, description):
+    eligibility, _ = classify_location(location)
+    if eligibility != "Brasil confirmado":
+        return False
+    role_group, _ = classify_role(title)
+    if not role_group:
+        return False
+    if not is_entry_level(title, description):
+        return False
+    return True
+
+def remotive():
     payload = request_json("https://remotive.com/api/remote-jobs", {"limit": 500})
     jobs = []
     for item in payload.get("jobs", []):
         title = item.get("title", "")
-        if not is_target_role(title):
-            continue
         location = item.get("candidate_required_location") or ""
-        status, _ = classify_location(location, "Remotive")
-        # Mantém América Latina e global em categoria separada; não confunde com Brasil confirmado.
-        if status == "Não confirmado":
+        description = item.get("description") or ""
+        if not keep_job(title, location, description):
             continue
         jobs.append(make_job(
-            "Remotive", item.get("company_name"), title, location,
-            item.get("description"), item.get("url"), item.get("publication_date"),
-            item.get("id"), item.get("salary"), "Remoto",
-            item.get("job_type") or "Não informado", fx_rates, default_currency="USD",
+            "Remotive", item, title, item.get("company_name"), location, description,
+            item.get("url"), item.get("publication_date"), item.get("id"),
+            item.get("salary"), True, item.get("job_type"),
         ))
     return jobs
 
-def remoteok(fx_rates):
+def remoteok():
     payload = request_json("https://remoteok.com/api")
     jobs = []
     for item in payload if isinstance(payload, list) else []:
         if not isinstance(item, dict) or not item.get("position"):
             continue
         title = item.get("position", "")
-        if not is_target_role(title):
+        location = item.get("location") or ""
+        description = item.get("description") or ""
+        if not keep_job(title, location, description):
             continue
-        location = item.get("location") or "Remote / global"
-        salary_label = item.get("salary") or ""
-        if not salary_label and (item.get("salary_min") or item.get("salary_max")):
-            low = item.get("salary_min") or item.get("salary_max")
-            high = item.get("salary_max") or low
-            salary_label = f"USD {low}-{high} per year"
+        salary = item.get("salary") or ""
+        if not salary and (item.get("salary_min") or item.get("salary_max")):
+            salary = f"{item.get('salary_min') or item.get('salary_max')} - {item.get('salary_max') or item.get('salary_min')}"
         jobs.append(make_job(
-            "RemoteOK", item.get("company"), title, location,
-            item.get("description"), item.get("url"), item.get("date"),
-            item.get("id"), salary_label, "Remoto", "Não informado",
-            fx_rates, default_currency="USD", default_period="year",
+            "RemoteOK", item, title, item.get("company"), location, description,
+            item.get("url"), item.get("date"), item.get("id"), salary, True,
         ))
     return jobs
 
-def arbeitnow(fx_rates):
+def arbeitnow():
     payload = request_json("https://www.arbeitnow.com/api/job-board-api")
     jobs = []
     for item in payload.get("data", []):
         title = item.get("title", "")
-        if not is_target_role(title):
-            continue
         location = item.get("location") or ""
-        status, _ = classify_location(location, "Arbeitnow")
-        # A fonte é predominantemente europeia; só aceita localização explicitamente brasileira.
-        if status != "Brasil indicado":
+        description = item.get("description") or ""
+        if not keep_job(title, location, description):
             continue
         jobs.append(make_job(
-            "Arbeitnow", item.get("company_name"), title, location,
-            item.get("description"), item.get("url"), item.get("created_at"),
-            item.get("slug") or item.get("url"), None,
-            "Remoto" if item.get("remote") else "Presencial / não informado",
-            "Não informado", fx_rates,
+            "Arbeitnow", item, title, item.get("company_name"), location, description,
+            item.get("url"), item.get("created_at"), item.get("slug") or item.get("url"),
+            item.get("salary"), item.get("remote"),
         ))
     return jobs
 
 def main():
-    fx_rates = get_fx_rates()
     jobs, errors = [], []
-    for name, collector in (
-        ("Remotive", remotive),
-        ("RemoteOK", remoteok),
-        ("Arbeitnow", arbeitnow),
-    ):
+    for name, collector in (("Remotive", remotive), ("RemoteOK", remoteok), ("Arbeitnow", arbeitnow)):
         try:
-            found = collector(fx_rates)
+            found = collector()
             jobs.extend(found)
-            print(f"{name}: {len(found)} vaga(s) após filtros.")
+            print(f"{name}: {len(found)} vaga(s) elegíveis após filtros.")
         except Exception as exc:
             errors.append(f"{name}: {type(exc).__name__}: {exc}")
     unique = {}
@@ -258,7 +245,11 @@ def main():
         unique[key] = job
     ordered = sorted(
         unique.values(),
-        key=lambda j: (j["eligibility_status"] != "Brasil indicado", j.get("published_at") or ""),
+        key=lambda j: (
+            j["role_group"] != "Perfil atual",
+            j["work_mode"] not in ("Híbrido", "Presencial"),
+            j.get("published_at") or "",
+        ),
         reverse=False,
     )
     data = {
@@ -266,12 +257,19 @@ def main():
         "count": len(ordered),
         "errors": errors,
         "sources": ["Remotive", "RemoteOK", "Arbeitnow"],
-        "salary_policy": "Salários estrangeiros são estimativas mensais brutas convertidas quando há cotação; valores não informados permanecem desconhecidos, não zero.",
+        "filters": {
+            "country": "Brasil confirmado; vagas globais sem elegibilidade brasileira são excluídas",
+            "locations": ["Curitiba e região metropolitana", "Remoto em todo o Brasil"],
+            "seniority": "Entrada; assistente/auxiliar ou júnior com requisitos compatíveis",
+            "salary_floor_brl": 3000,
+            "salary_policy": "Vagas sem salário informado são mantidas e identificadas; somente valores explicitamente em BRL são comparados ao piso",
+        },
+        "coverage_note": "Cobertura parcial dos feeds públicos listados. Não inclui integração com LinkedIn, Gupy, Indeed nem páginas de carreira não conectadas.",
         "jobs": ordered,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Feed atualizado: {len(ordered)} vagas; {len(errors)} fonte(s) com erro.")
+    print(f"Feed atualizado: {len(ordered)} vaga(s); {len(errors)} fonte(s) com erro.")
     if errors:
         print("\n".join(errors))
 
