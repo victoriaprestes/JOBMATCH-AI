@@ -239,7 +239,7 @@ def fetch_empregare_pages(params, max_pages=5):
     jobs = []
     for page in range(1, max_pages + 1):
         query = list(params) + [("ItensPagina", 100), ("Pagina", page)]
-        payload = request_json("https://memora.empregare.com/api/pt-br/vagas/buscar-novo", query)
+        payload = request_json("https://www.empregare.com/api/pt-br/vagas/buscar-novo", query)
         model = payload.get("model") or {}
         jobs.extend(model.get("dados") or [])
         if page >= int(model.get("totalPaginas") or 1):
