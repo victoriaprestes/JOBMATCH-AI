@@ -1,4 +1,6 @@
 import json
+import re
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -123,6 +125,14 @@ with tab0:
                 group = job.get("role_group", PROFILE_GROUP)
                 left.caption(f"{group} · {job.get('location', 'Local não informado')} · {job.get('work_mode', 'Modalidade não informada')}")
                 left.caption(f"Brasil confirmado · Fonte: {job.get('source', '')} · Vínculo: {job.get('employment_type', 'Não informado')}")
+                if job.get("published_at"):
+                    try:
+                        published = datetime.fromisoformat(str(job["published_at"]).replace("Z", "+00:00"))
+                        left.caption("Publicada em " + published.strftime("%d/%m/%Y"))
+                    except ValueError:
+                        pass
+                if re.search(r"\\b(pcd|pessoa com deficiencia|pessoas com deficiencia)\\b", (job.get("title", "") + " " + job.get("description", "")).lower()):
+                    left.caption("O anúncio menciona vaga afirmativa/exclusiva para PCD; confira os critérios de elegibilidade.")
                 salary_label = job.get("salary_label") or "Não informado"
                 low = job.get("salary_min_brl_monthly")
                 high = job.get("salary_max_brl_monthly")
