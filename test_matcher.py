@@ -33,6 +33,9 @@ def test_role_groups_include_profile_and_transition():
     assert classify_role("Assistente Administrativo")[0] == "Perfil atual"
     assert classify_role("Assistente de Governança")[0] == "Trilha de transição"
     assert classify_role("IT Operations Assistant")[0] == "Trilha de transição"
+    assert classify_role("Junior Governance Analyst")[0] == "Trilha de transição"
+    assert classify_role("Junior IT Operations Analyst")[0] == "Trilha de transição"
+    assert classify_role("IT Operations Coordinator")[0] == "Trilha de transição"
     assert classify_role("Data Analyst") == (None, None)
 
 def test_entry_level_rules():
