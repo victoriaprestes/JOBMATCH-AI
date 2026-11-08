@@ -33,6 +33,8 @@ TRANSITION_ROLE_PATTERNS = [
     r"\b(assistente|auxiliar)\s+(de\s+)?(governanca|governance|governanca\s+de\s+ti|it\s+governance|controles\s+internos|internal\s+controls|riscos|risk|compliance|auditoria|audit)\b",
     r"\b(analista|analyst)\s+(de\s+)?(governanca|governance|controles\s+internos|internal\s+controls|riscos|risk|compliance|auditoria|audit)(\s+(junior|jr\.?|i))?\b",
     r"\b(governance|it\s+governance|internal\s+controls|risk|compliance|audit)\s+(assistant|associate|analyst\s+(i|junior|jr\.?))\b",
+    r"\b(junior|jr\.?)\s+(governance|it\s+governance|it\s+operations|it\s+service\s+management|itsm)\s+(analyst|coordinator)\b",
+    r"\b(governance|it\s+governance|it\s+operations|it\s+service\s+management|itsm)\s+coordinator\b",
     r"\b(assistente|auxiliar)\s+(de\s+)?(operacoes\s+de\s+ti|it\s+operations|infraestrutura\s+de\s+ti|servicos\s+de\s+ti|gestao\s+de\s+servicos|gestao\s+de\s+ti)\b",
     r"\b(analista|analyst)\s+(de\s+)?(operacoes\s+de\s+ti|it\s+operations|it\s+service\s+management|itsm|service\s+management|service\s+delivery)(\s+(junior|jr\.?|i))?\b",
     r"\b(it\s+operations|it\s+service\s+management|itsm|service\s+management|service\s+delivery|it\s+governance)\s+(assistant|associate|analyst\s+(i|junior|jr\.?))\b",
