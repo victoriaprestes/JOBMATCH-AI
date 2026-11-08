@@ -1,91 +1,71 @@
-"""Collect public job feeds; outputs only public vacancy data."""
-import json, re, html
-from pathlib import Path
+"""Coleta vagas de feeds públicos; não acessa páginas privadas nem exige credenciais."""
+import html, json, re
 from datetime import datetime, timezone
+from pathlib import Path
 import requests
 
 OUT=Path("data/jobs_feed.json")
-KEYWORDS=[
- "administrative analyst","operations analyst","business operations","process analyst",
- "project coordinator","project assistant","back office","governance analyst",
- "business analyst","data analyst","business intelligence","bi analyst",
- "analista administrativo","analista de operações","analista de processos",
- "analista de negócios","analista de projetos","backoffice","analista de dados",
- "power bi","sql","support analyst","it analyst","junior analyst"
-]
 ROLE_TERMS=("analyst","analista","operations","operacoes","process","processos","business","negocios",
-            "administrative","administrativo","back office","backoffice","project","projetos",
-            "data","dados","support","suporte","governance","governanca","bi ")
+ "administrative","administrativo","back office","backoffice","project","projetos","data","dados",
+ "support","suporte","governance","governanca","business intelligence","power bi","sql")
 SENIOR_TERMS=("senior","sr.","sênior","lead","principal","director","diretor","head of","manager","gerente")
+BRAZIL_TERMS=("brazil","brasil","worldwide","anywhere","latin america","latam","south america","americas")
 
-def clean_text(value):
+def clean(value):
     value=re.sub(r"<[^>]+>"," ",str(value or ""))
-    return re.sub(r"\\s+"," ",html.unescape(value)).strip()
+    return re.sub(r"\s+"," ",html.unescape(value)).strip()
 
-def is_relevant(title, description=""):
-    text=(title+" "+description).lower()
-    return any(k in text for k in ROLE_TERMS) and not any(s in title.lower() for s in SENIOR_TERMS)
+def relevant(title,desc):
+    t=(title+" "+desc).lower()
+    return any(k in t for k in ROLE_TERMS) and not any(k in title.lower() for k in SENIOR_TERMS)
 
-def fetch_json(url, params=None):
-    response=requests.get(url,params=params,timeout=25,headers={"User-Agent":"JobMatchAI/0.1 (personal job search)"})
-    response.raise_for_status()
-    return response.json()
+def get(url,params=None):
+    r=requests.get(url,params=params,timeout=30,headers={"User-Agent":"JobMatchAI/0.1"})
+    r.raise_for_status()
+    return r.json()
 
-def collect_arbeitnow():
-    found=[]
-    for page in range(1,4):
-        payload=fetch_json("https://www.arbeitnow.com/api/job-board-api",{"page":page})
-        for j in payload.get("data",[]):
-            title=j.get("title","")
-            desc=clean_text(j.get("description",""))
-            loc=j.get("location","")
-            remote=bool(j.get("remote",False))
-            local=("curitiba" in loc.lower() or "parana" in loc.lower() or "paraná" in loc.lower() or "brazil" in loc.lower() or "brasil" in loc.lower())
-            if (remote or local) and is_relevant(title,desc):
-                found.append({
-                  "source":"Arbeitnow","source_url":"https://www.arbeitnow.com/",
-                  "external_id":str(j.get("slug") or j.get("url") or title),
-                  "company":j.get("company_name","Empresa não informada"),"title":title,
-                  "location":loc or ("Remoto" if remote else "Não informado"),
-                  "work_mode":"Remoto" if remote else "Presencial / não informado",
-                  "salary":0,"salary_label":"Não informado","url":j.get("url",""),
-                  "description":desc,"published_at":j.get("created_at")
-                })
-    return found
-
-def collect_remotive():
-    payload=fetch_json("https://remotive.com/api/remote-jobs",{"limit":500})
-    found=[]
+def remotive():
+    payload=get("https://remotive.com/api/remote-jobs",{"limit":500})
+    out=[]
     for j in payload.get("jobs",[]):
-        title=j.get("title","")
-        desc=clean_text(j.get("description",""))
-        if not is_relevant(title,desc):
+        title=j.get("title",""); desc=clean(j.get("description"))
+        allowed=j.get("candidate_required_location") or "Worldwide"
+        if not any(x in allowed.lower() for x in BRAZIL_TERMS): continue
+        if not relevant(title,desc): continue
+        out.append({"source":"Remotive","company":j.get("company_name") or "Não informada",
+         "title":title,"location":allowed,"work_mode":"Remoto","salary":0,
+         "salary_label":j.get("salary") or "Não informado","url":j.get("url",""),
+         "description":desc,"published_at":j.get("publication_date"),"external_id":str(j.get("id"))})
+    return out
+
+def arbeitnow():
+    payload=get("https://www.arbeitnow.com/api/job-board-api")
+    out=[]
+    for j in payload.get("data",[]):
+        title=j.get("title",""); desc=clean(j.get("description"))
+        location=j.get("location") or ""
+        if not any(x in location.lower() for x in BRAZIL_TERMS) and not any(x in location.lower() for x in ("curitiba","parana","paraná")):
             continue
-        found.append({
-          "source":"Remotive","source_url":"https://remotive.com/",
-          "external_id":str(j.get("id")),"company":j.get("company_name","Empresa não informada"),
-          "title":title,"location":j.get("candidate_required_location","Remoto"),
-          "work_mode":"Remoto","salary":0,"salary_label":j.get("salary") or "Não informado",
-          "url":j.get("url",""),"description":desc,
-          "published_at":j.get("publication_date")
-        })
-    return found
+        if not relevant(title,desc): continue
+        out.append({"source":"Arbeitnow","company":j.get("company_name") or "Não informada",
+         "title":title,"location":location or "Não informada",
+         "work_mode":"Remoto" if j.get("remote") else "Presencial / não informado",
+         "salary":0,"salary_label":"Não informado","url":j.get("url",""),
+         "description":desc,"published_at":j.get("created_at"),
+         "external_id":str(j.get("slug") or j.get("url"))})
+    return out
 
 def main():
     jobs=[]; errors=[]
-    for name,fn in [("Arbeitnow",collect_arbeitnow),("Remotive",collect_remotive)]:
+    for name,fn in (("Remotive",remotive),("Arbeitnow",arbeitnow)):
         try: jobs.extend(fn())
-        except Exception as exc: errors.append(f"{name}: {type(exc).__name__}: {exc}")
-    unique={}
-    for j in jobs:
-        key=(j["source"],j["external_id"])
-        unique[key]=j
-    result={"updated_at":datetime.now(timezone.utc).isoformat(),
-            "sources":["Arbeitnow","Remotive"],"count":len(unique),
-            "errors":errors,"jobs":list(unique.values())}
+        except Exception as e: errors.append(f"{name}: {type(e).__name__}: {e}")
+    unique={(j["source"],j["external_id"]):j for j in jobs}
+    data={"updated_at":datetime.now(timezone.utc).isoformat(),"count":len(unique),
+          "errors":errors,"jobs":list(unique.values())}
     OUT.parent.mkdir(parents=True,exist_ok=True)
-    OUT.write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding="utf-8")
-    print(f"Coletadas {len(unique)} vagas. Fontes com erro: {len(errors)}.")
-    if errors: print("\\n".join(errors))
+    OUT.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
+    print(f"Feed atualizado: {len(unique)} vagas; {len(errors)} fonte(s) com erro.")
+    if errors: print("\n".join(errors))
 
 if __name__=="__main__": main()
