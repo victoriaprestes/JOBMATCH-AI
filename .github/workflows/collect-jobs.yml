@@ -13,6 +13,10 @@ on:
     - cron: "0 11 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: jobmatch-collect-jobs
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -40,4 +44,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f data/jobs_feed.json
           git diff --cached --quiet || git commit -m "chore: atualizar feed de vagas"
+          git pull --rebase origin main
           git push
