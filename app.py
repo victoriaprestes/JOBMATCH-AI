@@ -131,7 +131,7 @@ with tab0:
                         left.caption("Publicada em " + published.strftime("%d/%m/%Y"))
                     except ValueError:
                         pass
-                if re.search(r"\\b(pcd|pessoa com deficiencia|pessoas com deficiencia)\\b", (job.get("title", "") + " " + job.get("description", "")).lower()):
+                if re.search(r"\b(pcd|pessoa com deficiencia|pessoas com deficiencia)\b", (job.get("title", "") + " " + job.get("description", "")).lower()):
                     left.caption("O anúncio menciona vaga afirmativa/exclusiva para PCD; confira os critérios de elegibilidade.")
                 salary_label = job.get("salary_label") or "Não informado"
                 low = job.get("salary_min_brl_monthly")
