@@ -281,11 +281,14 @@ def remotive():
         title = item.get("title", "")
         location = item.get("candidate_required_location") or ""
         description = item.get("description") or ""
+        published = item.get("publication_date")
+        if not is_fresh_posting(published, max_age_days=45):
+            continue
         if not keep_job(title, location, description):
             continue
         jobs.append(make_job(
             "Remotive", item, title, item.get("company_name"), location, description,
-            item.get("url"), item.get("publication_date"), item.get("id"),
+            item.get("url"), published, item.get("id"),
             item.get("salary"), True, item.get("job_type"),
         ))
     return jobs
@@ -299,6 +302,9 @@ def remoteok():
         title = item.get("position", "")
         location = item.get("location") or ""
         description = item.get("description") or ""
+        published = item.get("date")
+        if not is_fresh_posting(published, max_age_days=45):
+            continue
         if not keep_job(title, location, description):
             continue
         salary = item.get("salary") or ""
@@ -306,7 +312,7 @@ def remoteok():
             salary = f"{item.get('salary_min') or item.get('salary_max')} - {item.get('salary_max') or item.get('salary_min')}"
         jobs.append(make_job(
             "RemoteOK", item, title, item.get("company"), location, description,
-            item.get("url"), item.get("date"), item.get("id"), salary, True,
+            item.get("url"), published, item.get("id"), salary, True,
         ))
     return jobs
 
@@ -317,11 +323,14 @@ def arbeitnow():
         title = item.get("title", "")
         location = item.get("location") or ""
         description = item.get("description") or ""
+        published = item.get("created_at")
+        if not is_fresh_posting(published, max_age_days=45):
+            continue
         if not keep_job(title, location, description):
             continue
         jobs.append(make_job(
             "Arbeitnow", item, title, item.get("company_name"), location, description,
-            item.get("url"), item.get("created_at"), item.get("slug") or item.get("url"),
+            item.get("url"), published, item.get("slug") or item.get("url"),
             item.get("salary"), item.get("remote"),
         ))
     return jobs
