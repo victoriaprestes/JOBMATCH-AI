@@ -30,14 +30,16 @@ PROFILE_ROLE_PATTERNS = [
 # Cargos que podem ser uma trilha de transição/estudo. Não são tratados como
 # experiência já adquirida: a interface os identifica separadamente.
 TRANSITION_ROLE_PATTERNS = [
-    r"\b(assistente|auxiliar|analista\s+(junior|jr\.?|i)|junior\s+analyst|entry.level\s+analyst)\s+(de\s+)?(governanca|governance|governanca\s+de\s+ti|it\s+governance|controles\s+internos|internal\s+controls|riscos|risk|compliance|auditoria|audit)\b",
+    r"\b(assistente|auxiliar)\s+(de\s+)?(governanca|governance|governanca\s+de\s+ti|it\s+governance|controles\s+internos|internal\s+controls|riscos|risk|compliance|auditoria|audit)\b",
+    r"\b(analista|analyst)\s+(de\s+)?(governanca|governance|controles\s+internos|internal\s+controls|riscos|risk|compliance|auditoria|audit)(\s+(junior|jr\.?|i))?\b",
     r"\b(governance|it\s+governance|internal\s+controls|risk|compliance|audit)\s+(assistant|associate|analyst\s+(i|junior|jr\.?))\b",
-    r"\b(assistente|auxiliar|analista\s+(junior|jr\.?|i))\s+(de\s+)?(operacoes\s+de\s+ti|operações\s+de\s+ti|it\s+operations|infraestrutura\s+de\s+ti|servicos\s+de\s+ti|serviços\s+de\s+ti|gestao\s+de\s+servicos|gestão\s+de\s+serviços|gestao\s+de\s+ti|gestão\s+de\s+ti)\b",
+    r"\b(assistente|auxiliar)\s+(de\s+)?(operacoes\s+de\s+ti|it\s+operations|infraestrutura\s+de\s+ti|servicos\s+de\s+ti|gestao\s+de\s+servicos|gestao\s+de\s+ti)\b",
+    r"\b(analista|analyst)\s+(de\s+)?(operacoes\s+de\s+ti|it\s+operations|it\s+service\s+management|itsm|service\s+management|service\s+delivery)(\s+(junior|jr\.?|i))?\b",
     r"\b(it\s+operations|it\s+service\s+management|itsm|service\s+management|service\s+delivery|it\s+governance)\s+(assistant|associate|analyst\s+(i|junior|jr\.?))\b",
-    r"\b(assistente|auxiliar)\s+(de\s+)?(pmo|projetos\s+de\s+ti|gestao\s+de\s+projetos|gestão\s+de\s+projetos)\b",
+    r"\b(assistente|auxiliar)\s+(de\s+)?(pmo|projetos\s+de\s+ti|gestao\s+de\s+projetos|gestao|gestao de projetos)\b",
     r"\b(pmo|project\s+management\s+office)\s+(assistant|coordinator\s+assistant|analyst\s+(i|junior|jr\.?))\b",
-    r"\b(assistente|auxiliar)\s+(de\s+)?(processos|melhoria\s+continua|melhoria\s+contínua|qualidade|controles)\b",
-    r"\b(analista\s+(junior|jr\.?|i)|junior\s+analyst)\s+(de\s+)?(processos|melhoria\s+continua|melhoria\s+contínua|qualidade|controles|governanca|governance)\b",
+    r"\b(assistente|auxiliar)\s+(de\s+)?(processos|melhoria\s+continua|qualidade|controles)\b",
+    r"\b(analista|analyst)\s+(de\s+)?(processos|melhoria\s+continua|qualidade|controles)(\s+(junior|jr\.?|i))?\b",
 ]
 
 SENIOR_TITLE = re.compile(
@@ -94,24 +96,24 @@ def is_entry_level(title, description):
     desc_n = normalize(clean(description))
     if SENIOR_TITLE.search(title_n) or EXCLUDED_TITLE.search(title_n):
         return False
+    # Exigeções explícitas acima de dois anos eliminam a vaga, mesmo se o título disser assistente.
+    if re.search(r"\b([3-9]|[1-9][0-9])\s*\+?\s*(years?|anos?)\b", desc_n):
+        return False
+    if re.search(r"\b(minimum|at least|required|exige|exigimos|minimo|minimo de)\s+([3-9]|[1-9][0-9])\s*(years?|anos?)\b", desc_n):
+        return False
+    if re.search(r"\b(senior|sênior|pleno|mid.level)\s+(position|role|level|vaga|cargo)\b", desc_n):
+        return False
     # Assistente/auxiliar/trainee são cargos de entrada por nomenclatura.
     if re.search(r"\b(assistente|assistant|auxiliar|trainee|aprendiz|intern|estagiari[oa])\b", title_n):
         return True
-    # Analista/coordenador só entra se houver marcador explícito de início de carreira.
+    # Analista só entra com marcador explícito de início de carreira.
     entry_marker = re.search(
         r"\b(junior|jr\.?|entry.level|entry level|early career|analista i|analyst i|"
         r"0\s*(a|to|-)\s*2\s+anos?|1\s*(a|to|-)\s*2\s+anos?|"
         r"no experience required|sem experiencia|experiencia de ate 2 anos|"
         r"up to 2 years|0-2 years|1-2 years)\b", title_n + " " + desc_n
     )
-    if not entry_marker:
-        return False
-    # Rejeita exigência explícita superior a 2 anos.
-    if re.search(r"\b([3-9]|[1-9][0-9])\s*\+?\s*(years?|anos?)\b", desc_n):
-        return False
-    if re.search(r"\b(minimum|at least|required|exige|exigimos|minimo|minimo de)\s+([3-9]|[1-9][0-9])\s*(years?|anos?)\b", desc_n):
-        return False
-    return True
+    return bool(entry_marker)
 
 def classify_role(title):
     title_n = normalize(title)
