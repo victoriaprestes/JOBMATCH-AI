@@ -7,7 +7,7 @@ import html
 import json
 import re
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -238,6 +238,34 @@ def arbeitnow():
 
 
 
+def is_fresh_posting(published_at, max_age_days=45):
+    if not published_at:
+        return False
+    try:
+        parsed = datetime.fromisoformat(str(published_at).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed >= datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    except (TypeError, ValueError):
+        return False
+
+def has_conflicting_local_city(title):
+    local_cities = {
+        "curitiba", "colombo", "sao jose dos pinhais",
+        "pinhais", "araucaria", "campo largo",
+    }
+    patterns = (
+        r"[-–]\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'-]+?)\s*/\s*[A-Z]{2}\b",
+        r"\(([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .'-]+?)\s*/\s*[A-Z]{2}\)",
+    )
+    title_n = normalize(title)
+    for pattern in patterns:
+        for match in re.finditer(pattern, str(title or "")):
+            city = normalize(match.group(1)).strip(" -")
+            if city and city not in local_cities:
+                return True
+    return False
+
 def gupy():
     """Busca ampla no endpoint público usado pela busca do portal Gupy."""
     api = "https://portal.gupy.io/api/job-search/jobs"
@@ -254,6 +282,19 @@ def gupy():
         "IT Operations Assistant",
         "PMO Assistant",
         "assistente de gestão",
+        "governança",
+        "governança de TI",
+        "IT governance",
+        "IT operations",
+        "IT service management",
+        "gestão de serviços",
+        "ITSM",
+        "PMO",
+        "controles internos",
+        "gestão de riscos",
+        "compliance",
+        "analista de processos",
+        "gestão de projetos",
     ]
     jobs = []
     seen = set()
@@ -280,7 +321,10 @@ def gupy():
                 for item in rows:
                     title = item.get("name") or ""
                     company = item.get("careerPageName") or ""
-                    if not company or normalize(company) == "confidencial":
+                    if not company or normalize(company) in {
+                        "confidencial", "empresa confidencial", "pagina de carreira",
+                        "vem fazer parte do time", "carreiras",
+                    }:
                         continue
                     city = item.get("city") or ""
                     state_name = item.get("state") or ""
@@ -293,6 +337,11 @@ def gupy():
                         local_terms = ("curitiba", "colombo", "sao jose dos pinhais", "pinhais", "araucaria", "campo largo")
                         if not any(term in normalize(location) for term in local_terms):
                             continue
+                        if has_conflicting_local_city(title):
+                            continue
+                    published = item.get("publishedDate")
+                    if not is_fresh_posting(published):
+                        continue
                     description = clean(item.get("description") or "")
                     if not keep_job(title, location, description):
                         continue
@@ -319,7 +368,7 @@ def gupy():
                         job_type = "Trainee (regime a confirmar)"
                     jobs.append(make_job(
                         "Gupy", item, title, company, location, description, url,
-                        item.get("publishedDate"), item.get("id") or url,
+                        published, item.get("id") or url,
                         salary, mode_hint == "Remoto", job_type, mode_hint,
                     ))
                 if len(rows) < 100:
