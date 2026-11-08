@@ -41,6 +41,7 @@ TRANSITION_ROLE_PATTERNS = [
     r"\b(assistente|auxiliar)\s+(de\s+)?(pmo|projetos\s+de\s+ti|gestao\s+de\s+projetos|gestao|gestao de projetos)\b",
     r"\b(pmo|project\s+management\s+office)\s+(assistant|coordinator\s+assistant|analyst\s+(i|junior|jr\.?))\b",
     r"\b(analista|analyst)\s+(de\s+)?(pmo|gestao\s+de\s+projetos|gestao\s+de\s+servicos|service\s+management)(\s+(junior|jr\.?|i))?\b",
+    r"\b(analista|analyst)\s+(de\s+)?(projetos|projects|project)(\s+(junior|jr\.?|i))?\b",
     r"\b(assistente|auxiliar)\s+(de\s+)?(processos|melhoria\s+continua|qualidade|controles)\b",
     r"\b(analista|analyst)\s+(de\s+)?(processos|melhoria\s+continua|qualidade|controles)(\s+(junior|jr\.?|i))?\b",
 ]
