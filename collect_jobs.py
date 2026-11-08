@@ -182,8 +182,8 @@ def extract_benefits(item, description):
 
     header = re.compile(
         r"(?i)(?:^|\n|\s)(benef[ií]cios|benefits|"
-        r"o\s+que\s+oferecemos|what\s+we\s+offer|"
-        r"nosso\s+pacote\s+de\s+benef[ií]cios|"
+        r"o\s+que\s+oferecemos|o\s+que\s+vai\s+encontrar\s+por\s+aqui|"
+        r"what\s+we\s+offer|nosso\s+pacote\s+de\s+benef[ií]cios|"
         r"benef[ií]cios\s+e\s+vantagens)\s*[:\-]?\s*"
     )
     matches = list(header.finditer(text))
@@ -196,7 +196,8 @@ def extract_benefits(item, description):
         r"qualifica[cç][oõ]es|responsabilidades(?:\s+e\s+atribui[cç][oõ]es)?|"
         r"sobre\s+a\s+vaga|sobre\s+n[oó]s|about\s+the\s+role|"
         r"requirements|etapas\s+do\s+processo|"
-        r"inform[aá][cç][oõ]es\s+adicionais)\s*[:\-]?\s*"
+        r"inform[aá][cç][oõ]es\s+adicionais|sal[aá]rio|hor[aá]rio|local|"
+        r"etapas\s+do\s+processo)\s*[:\-]?\s*"
     )
     for match in matches:
         start = match.end()
