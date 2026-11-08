@@ -151,6 +151,34 @@ def parse_brl_salary(label):
         low, high = low / 12, high / 12
     return round(low), round(high), "Faixa bruta mensal estimada em reais; conferir periodicidade"
 
+def extract_benefits(item, description):
+    """Extrai benefícios declarados pela fonte ou por seção explícita do anúncio."""
+    raw = item.get("benefits") or item.get("benefit") or item.get("perks")
+    values = []
+    if isinstance(raw, list):
+        values = [clean(x.get("name") or x.get("title") or x) if isinstance(x, (dict, str)) else "" for x in raw]
+    elif isinstance(raw, dict):
+        values = [clean(k) + (": " + clean(v) if isinstance(v, str) and v.strip() else "") for k, v in raw.items()]
+    elif isinstance(raw, str):
+        values = [clean(x) for x in re.split(r"[;|•\\n]", raw) if clean(x)]
+    values = [x for x in values if x]
+    if values:
+        return "; ".join(dict.fromkeys(values))[:1200]
+    # Fallback conservador: só captura o trecho quando o anúncio tem um cabeçalho de benefícios.
+    text = clean(description)
+    match = re.search(
+        r"(?:benef[ií]cios|benefits|o que oferecemos|what we offer|perks)\\s*[:\\-]?\\s*(.{0,1400})",
+        text, re.I
+    )
+    if not match:
+        return ""
+    section = match.group(1)
+    section = re.split(
+        r"\\b(?:requisitos|qualifica[cç][oõ]es|responsabilidades|sobre a vaga|about the role|requirements)\\b",
+        section, maxsplit=1, flags=re.I
+    )[0]
+    return section[:1000].strip(" .;:-")
+
 def make_job(source, item, title, company, location, description, url, published, external_id,
              salary_label=None, remote_flag=None, employment_type=None, mode_hint=None):
     role_group, role_note = classify_role(title)
@@ -167,6 +195,7 @@ def make_job(source, item, title, company, location, description, url, published
         "salary_min_brl_monthly": salary_min,
         "salary_max_brl_monthly": salary_max,
         "salary_note": salary_note,
+        "benefits": extract_benefits(item, description),
         "eligibility_status": "Brasil confirmado",
         "eligibility_note": classify_location(location)[1],
         "role_group": role_group,
