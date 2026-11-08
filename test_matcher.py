@@ -1,5 +1,5 @@
 from src.matcher import normalize, score_job
-from collect_jobs import classify_location, classify_role, is_entry_level, keep_job, is_fresh_posting, has_conflicting_local_city
+from collect_jobs import classify_location, classify_role, is_entry_level, keep_job, is_fresh_posting, has_conflicting_local_city, is_targeted_affirmative_vacancy
 
 def test_normalize_accents():
     assert normalize("Governança e Gestão") == "governanca e gestao"
@@ -64,3 +64,25 @@ def test_gupy_posting_freshness_and_city_conflicts():
 
 def test_exclude_retail_and_cashier_roles():
     assert not is_entry_level("Assistente Administrativo de Loja", "Atendimento ao cliente e caixa.")
+
+
+def test_exclude_exclusive_affirmative_vacancies():
+    assert is_targeted_affirmative_vacancy(
+        "ASSISTENTE ADMINISTRATIVO | EXCLUSIVA PARA PESSOAS COM DEFICIÊNCIA", ""
+    )
+    assert is_targeted_affirmative_vacancy(
+        "Analista Administrativo Jr (Exclusivo PCD)", ""
+    )
+    assert is_targeted_affirmative_vacancy(
+        "Assistente", "Esta é uma vaga afirmativa para pessoas negras."
+    )
+    assert not is_targeted_affirmative_vacancy(
+        "Assistente Administrativo", "Todas as nossas vagas são elegíveis a pessoas com deficiência."
+    )
+    assert not is_targeted_affirmative_vacancy(
+        "Assistente Administrativo", "Vaga aberta a todos os públicos, inclusive PCD."
+    )
+    assert not keep_job(
+        "ASSISTENTE ADMINISTRATIVO | EXCLUSIVA PARA PESSOAS COM DEFICIÊNCIA",
+        "Curitiba, Paraná", "Rotinas de compras."
+    )
