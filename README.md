@@ -6,7 +6,7 @@ Aplicação pessoal para encontrar vagas de entrada no Brasil, avaliar aderênci
 
 - **Localização obrigatória:** Brasil explicitamente indicado no anúncio. Para vagas presenciais/híbridas, foco em Curitiba e região metropolitana; para remotas, contratação explicitamente permitida no Brasil.
 - **Localizações excluídas:** Worldwide, Global, Americas, LATAM e anúncios sem país elegível confirmado.
-- **Senioridade:** assistente/auxiliar/trainee ou vagas júnior/analista I com evidência de nível inicial. Títulos e requisitos sêniores são excluídos. Vagas predominantemente de caixa, loja, estoque e atendimento ao cliente também são descartadas para evitar funções muito operacionais.
+- **Senioridade e atualidade:** assistente/auxiliar/trainee ou vagas júnior/analista I com evidência de nível inicial; anúncios sem data ou com mais de 45 dias são descartados. Títulos e requisitos sêniores são excluídos. Vagas predominantemente de caixa, loja, estoque, atendimento ao cliente e contratos temporários identificados no título também são descartadas.
 - **Trilha de perfil atual:** administrativo, suporte executivo, operações, processos, projetos/PMO, compras, facilities, back office e financeiro corporativo.
 - **Trilha de transição:** governança, governança de TI, IT Operations, IT Service Management, gestão de serviços, controles internos, riscos, compliance, auditoria e PMO/gestão de projetos em nível inicial.
 - **Vínculo e salário:** a busca da Empregare solicita regime CLT; nas demais fontes, o vínculo pode não estar informado e é exibido como não confirmado. O piso desejado é R$ 3.000 brutos mensais. Vagas com remuneração em reais abaixo do piso podem ser ocultadas na interface. Vagas sem salário divulgado são identificadas como não confirmadas, nunca tratadas como se atendessem ao piso.
@@ -24,7 +24,7 @@ O sistema não confirma por conta própria se a contratação é CLT ou se benef
 
 O workflow .github/workflows/collect-jobs.yml executa diariamente às 08:00 no horário de Curitiba (11:00 UTC), também roda após alterações no coletor e pode ser acionado manualmente em Actions → Atualizar vagas automaticamente → Run workflow.
 
-O GitHub Actions baixa o repositório, instala dependências, consulta os feeds, aplica filtros de país/cargo/senioridade, remove duplicatas e atualiza data/jobs_feed.json. O Streamlit lê o feed atualizado. O banco de candidaturas pessoais permanece local e não é publicado.
+O GitHub Actions baixa o repositório, instala dependências, consulta os feeds, aplica filtros de país/cargo/senioridade, remove duplicatas e atualiza data/jobs_feed.json. O Streamlit consulta a versão mais recente do feed no GitHub a cada carregamento, sem depender de sincronização diária do Codespace. O banco de candidaturas pessoais permanece local e não é publicado.
 
 ## Executar localmente
 
