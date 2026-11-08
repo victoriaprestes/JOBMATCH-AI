@@ -68,7 +68,15 @@ with tab0:
                 left, right = st.columns([5,1])
                 left.markdown(f"**{job.get('title','Cargo')} — {job.get('company','Empresa')}**")
                 left.caption(f"{job.get('location','Local não informado')} · {job.get('work_mode','Modalidade não informada')} · Fonte: {job.get('source','')}")
-                left.write("Salário: " + str(job.get("salary_label") or "não informado"))
+                eligibility = job.get("eligibility_status", "Elegibilidade não confirmada")
+                left.caption(f"Elegibilidade: {eligibility} — {job.get('eligibility_note','confirme no anúncio original')}")
+                salary_text = job.get("salary_label") or "não informado"
+                estimate = job.get("salary_brl_monthly_estimate")
+                if estimate is not None:
+                    salary_text += f" · estimativa de R$ {estimate:,.0f}/mês".replace(",", ".")
+                left.write("Remuneração: " + salary_text)
+                if job.get("salary_note"):
+                    left.caption(job["salary_note"])
                 right.metric("Match", f"{score}%")
                 if job.get("url"):
                     left.markdown(f"[Ver anúncio na fonte original]({job['url']})")
