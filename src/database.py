@@ -39,7 +39,7 @@ def save_automatic_job(job):
     with connect() as conn:
         conn.execute("""INSERT OR IGNORE INTO jobs
             (company,title,location,work_mode,salary,url,description,notes,status,created_at,source,external_id,benefits)
-            VALUES (?,?,?,?,?,?,?,'','Salva',?,?,?,?,?)""".replace("?,?,?,?,?)", "?,?,?,?)"),
+            VALUES (?,?,?,?,?,?,?,'','Salva',?,?,?,?)""",
             (job.get("company") or "Empresa não informada", job.get("title") or "Cargo",
              job.get("location") or "", job.get("work_mode") or "Não informado",
              int(job.get("salary_min_brl_monthly") or 0), job.get("url") or "",
