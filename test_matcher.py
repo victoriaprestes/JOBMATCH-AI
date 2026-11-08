@@ -1,5 +1,5 @@
 from src.matcher import normalize, score_job
-from collect_jobs import classify_location, classify_role, is_entry_level, keep_job
+from collect_jobs import classify_location, classify_role, is_entry_level, keep_job, is_fresh_posting, has_conflicting_local_city
 
 def test_normalize_accents():
     assert normalize("Governança e Gestão") == "governanca e gestao"
@@ -50,3 +50,14 @@ def test_keep_job_requires_all_filters():
     assert not keep_job("Assistente Administrativo", "Worldwide", "Excel")
     assert not keep_job("Senior Operations Analyst", "Curitiba, Brazil", "10 years")
     assert not keep_job("Data Analyst", "Remote - Brazil", "SQL")
+
+
+def test_gupy_posting_freshness_and_city_conflicts():
+    assert is_fresh_posting("2026-11-06T12:00:00Z")
+    assert not is_fresh_posting("2025-12-12T12:00:00Z")
+    assert has_conflicting_local_city("Assistente Administrativo - Londrina/PR")
+    assert has_conflicting_local_city("Assistente Administrativo iPlace - Joinville/SC")
+    assert not has_conflicting_local_city("Assistente Administrativo - Curitiba/PR")
+
+def test_exclude_retail_and_cashier_roles():
+    assert not is_entry_level("Assistente Administrativo de Loja", "Atendimento ao cliente e caixa.")
