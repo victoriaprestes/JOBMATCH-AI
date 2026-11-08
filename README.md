@@ -58,13 +58,13 @@ src/database.py
 (vagas salvas e etapas de candidatura)
 ```
 
-O workflow `.github/workflows/collect-jobs.yml` executa a coleta diariamente às 08:00 no horário de Curitiba (11:00 UTC), além de poder ser iniciado manualmente pelo GitHub Actions. Antes da coleta, o workflow instala as dependências, executa os testes com pytest e verifica a sintaxe dos módulos Python. Ao final, atualiza o feed no repositório.
+O workflow `.github/workflows/collect-jobs.yml` executa a coleta diariamente às 08:00 no horário de Curitiba (11:00 UTC), além de poder ser iniciado manualmente pelo GitHub Actions. A interface apresenta por padrão vagas dos últimos 7 dias, com prioridade para publicações do dia e do dia anterior; é possível expandir a janela até 45 dias para consultar anúncios que continuam aparecendo como ativos nas fontes. Antes da coleta, o workflow instala as dependências, executa os testes com pytest e verifica a sintaxe dos módulos Python. Ao final, atualiza o feed no repositório.
 
 ## Critérios de coleta
 
 - **Localização:** Brasil explicitamente indicado no anúncio. Para vagas presenciais/híbridas, foco em Curitiba e região metropolitana; para remotas, contratação explicitamente permitida no Brasil.
 - **Localizações excluídas:** Worldwide, Global, Americas, LATAM e anúncios sem país elegível confirmado.
-- **Senioridade:** assistente, auxiliar, trainee e vagas júnior/analista I com evidência de nível inicial. Anúncios sem data ou com mais de 45 dias são descartados; títulos e requisitos sêniores são excluídos.
+- **Senioridade e atualidade:** assistente, auxiliar, trainee e vagas júnior/analista I com evidência de nível inicial. A visualização padrão mostra apenas vagas publicadas nos últimos 7 dias, priorizando hoje e ontem. Um filtro opcional permite incluir anúncios de 8 a 45 dias que ainda estejam sendo retornados pela fonte consultada. Anúncios sem data ou com mais de 45 dias são descartados; títulos e requisitos sêniores são excluídos.
 - **Tipos de vaga excluídos:** posições predominantemente operacionais fora do escopo, como caixa, loja, estoque e atendimento ao cliente, além de contratos temporários identificados no título.
 - **Ações afirmativas exclusivas:** vagas exclusivas ou reservadas a grupos específicos são filtradas; anúncios gerais que apenas informam aceitar pessoas com deficiência são mantidos.
 - **Remuneração:** o piso desejado é R$ 3.000 brutos mensais. Vagas com remuneração em reais abaixo do piso podem ser ocultadas na interface. Vagas sem salário divulgado permanecem identificadas como não confirmadas.
