@@ -21,7 +21,7 @@ LEARNING_TERMS = {
 def normalize(value):
     value = unicodedata.normalize("NFKD", str(value or "").lower())
     value = "".join(ch for ch in value if not unicodedata.combining(ch))
-    return re.sub(r"\\s+", " ", value)
+    return re.sub(r"\s+", " ", value)
 
 def score_job(description, title="", role_group="Perfil atual"):
     text = normalize(f"{title} {description}")
