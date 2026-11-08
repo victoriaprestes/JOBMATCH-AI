@@ -235,86 +235,99 @@ def arbeitnow():
     return jobs
 
 
-def fetch_empregare_pages(params, max_pages=5):
-    jobs = []
-    for page in range(1, max_pages + 1):
-        query = list(params) + [("ItensPagina", 100), ("Pagina", page)]
-        payload = request_json("https://www.empregare.com/api/pt-br/vagas/buscar-novo", query)
-        model = payload.get("model") or {}
-        jobs.extend(model.get("dados") or [])
-        if page >= int(model.get("totalPaginas") or 1):
-            break
-    return jobs
 
-def empregare():
+def gupy():
+    """Busca ampla no endpoint público usado pela busca do portal Gupy."""
+    api = "https://portal.gupy.io/api/job-search/jobs"
+    keywords = [
+        "assistente administrativo",
+        "assistente de operações",
+        "assistente de projetos",
+        "assistente de governança",
+        "assistente de operações de TI",
+        "assistente de compras",
+        "assistente de facilities",
+        "analista de governança júnior",
+        "analista de processos júnior",
+        "IT Operations Assistant",
+        "PMO Assistant",
+        "assistente de gestão",
+    ]
     jobs = []
-    # Presencial/híbrido: somente Curitiba e municípios próximos explicitamente filtrados.
-    local_params = [
-        ("Estado", "Paraná"),
-        ("Cidade", "Curitiba"),
-        ("Cidade", "Colombo"),
-        ("Cidade", "São José dos Pinhais"),
-        ("Cidade", "Pinhais"),
-        ("Cidade", "Araucária"),
-        ("Cidade", "Campo Largo"),
-        ("Modalidade", "presencial"),
-        ("Modalidade", "hibrido"),
-        ("Regime", "CLT"),
-    ]
-    # Remoto: API filtrada por país, não por localização global.
-    remote_params = [
-        ("Pais", "Brasil"),
-        ("Modalidade", "remoto"),
-        ("Regime", "CLT"),
-    ]
-    for mode, params in (("Local", local_params), ("Remoto", remote_params)):
-        source_items = fetch_empregare_pages(params)
-        print(f"Empregare {mode}: {len(source_items)} anúncio(s) retornado(s) pela API.")
-        for item in source_items:
-            title = item.get("titulo") or ""
-            city_names = item.get("cidades") or []
-            if isinstance(city_names, str):
-                city_names = [city_names]
-            if mode == "Remoto":
-                location = "Remoto - Brasil"
-                mode_hint = "Remoto"
-            else:
-                allowed_cities = {
-                    "curitiba", "colombo", "sao jose dos pinhais",
-                    "pinhais", "araucaria", "campo largo",
+    seen = set()
+    workplace_modes = (
+        ("Local", "hybrid,on-site", "Paraná"),
+        ("Remoto", "remote", None),
+    )
+    for scope, workplace_type, state in workplace_modes:
+        for keyword in keywords:
+            for page in range(2):
+                params = {
+                    "jobName": keyword,
+                    "offset": page * 100,
+                    "limit": 100,
+                    "workplaceType": workplace_type,
+                    "type": "vacancy_type_effective,vacancy_type_trainee",
                 }
-                matching_cities = [str(city) for city in city_names if normalize(city) in allowed_cities]
-                if not matching_cities:
-                    continue
-                location = ", ".join(matching_cities) + ", Paraná, Brasil"
-                mode_text = normalize(item.get("trabalhoRemotoTexto") or "")
-                if "hibrid" in mode_text:
-                    mode_hint = "Híbrido"
-                elif item.get("trabalhoRemoto") is True or "remoto" in mode_text:
-                    mode_hint = "Remoto"
-                else:
-                    mode_hint = "Presencial"
-            level = item.get("nivel") or ""
-            summary = item.get("chamada") or ""
-            description = " ".join(str(x) for x in (summary, level) if x)
-            if not keep_job(title, location, description):
-                continue
-            salary = item.get("salario")
-            if isinstance(salary, (int, float)) and salary > 0:
-                salary = f"R$ {salary}"
-            url = item.get("url") or ""
-            if url and not str(url).startswith("http"):
-                url = "https://www.empregare.com/" + str(url).lstrip("/")
-            jobs.append(make_job(
-                "Empregare", item, title, item.get("empresa"), location, description,
-                url, item.get("data") or item.get("timestamp"), item.get("id"),
-                salary, mode_hint == "Remoto", "CLT (filtro da fonte)", mode_hint,
-            ))
+                if state:
+                    params["state"] = state
+                payload = request_json(api, params)
+                rows = payload.get("data") if isinstance(payload, dict) else None
+                if not isinstance(rows, list):
+                    raise ValueError("Gupy: resposta inesperada; esperado objeto com lista 'data'")
+                for item in rows:
+                    title = item.get("name") or ""
+                    company = item.get("careerPageName") or ""
+                    if not company or normalize(company) == "confidencial":
+                        continue
+                    city = item.get("city") or ""
+                    state_name = item.get("state") or ""
+                    country = item.get("country") or ""
+                    workplace = item.get("workplaceType") or ""
+                    location = ", ".join(str(x) for x in (workplace, city, state_name, country) if x)
+                    mode_map = {"remote": "Remoto", "hybrid": "Híbrido", "on-site": "Presencial"}
+                    mode_hint = mode_map.get(normalize(workplace), classify_mode(location))
+                    if scope == "Local":
+                        local_terms = ("curitiba", "colombo", "sao jose dos pinhais", "pinhais", "araucaria", "campo largo")
+                        if not any(term in normalize(location) for term in local_terms):
+                            continue
+                    description = clean(item.get("description") or "")
+                    if not keep_job(title, location, description):
+                        continue
+                    url = item.get("jobUrl") or ""
+                    if not str(url).startswith("https://") or ".gupy.io/" not in str(url):
+                        continue
+                    key = str(url)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    salary = item.get("salary")
+                    if isinstance(salary, dict):
+                        currency = str(salary.get("currency") or "").upper()
+                        low = salary.get("min") or salary.get("minimum")
+                        high = salary.get("max") or salary.get("maximum")
+                        if currency in ("BRL", "R$") and low is not None:
+                            salary = f"R$ {low}" + (f" - {high}" if high is not None else "")
+                        else:
+                            salary = None
+                    job_type = item.get("type") or "Regime não informado"
+                    if job_type == "vacancy_type_effective":
+                        job_type = "Efetivo (regime CLT a confirmar)"
+                    elif job_type == "vacancy_type_trainee":
+                        job_type = "Trainee (regime a confirmar)"
+                    jobs.append(make_job(
+                        "Gupy", item, title, company, location, description, url,
+                        item.get("publishedDate"), item.get("id") or url,
+                        salary, mode_hint == "Remoto", job_type, mode_hint,
+                    ))
+                if len(rows) < 100:
+                    break
+    print(f"Gupy: {len(jobs)} vaga(s) elegíveis após filtros.")
     return jobs
 
 def main():
     jobs, errors = [], []
-    for name, collector in (("Empregare", empregare), ("Remotive", remotive), ("RemoteOK", remoteok), ("Arbeitnow", arbeitnow)):
+    for name, collector in (("Gupy", gupy), ("Remotive", remotive), ("RemoteOK", remoteok), ("Arbeitnow", arbeitnow)):
         try:
             found = collector()
             jobs.extend(found)
@@ -338,7 +351,7 @@ def main():
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "count": len(ordered),
         "errors": errors,
-        "sources": ["Empregare", "Remotive", "RemoteOK", "Arbeitnow"],
+        "sources": ["Gupy", "Remotive", "RemoteOK", "Arbeitnow"],
         "filters": {
             "country": "Brasil confirmado; vagas globais sem elegibilidade brasileira são excluídas",
             "locations": ["Curitiba e região metropolitana", "Remoto em todo o Brasil"],
