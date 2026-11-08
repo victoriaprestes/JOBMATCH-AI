@@ -58,3 +58,16 @@ A pontuação atual é uma heurística lexical: procura termos associados ao per
 - [ ] Adicionar dados demonstrativos fictícios.
 - [ ] Avaliar integração com fontes de vagas que permitam acesso automatizado.
 - [ ] Preparar deploy público separado dos dados pessoais.
+
+
+## Coleta automática de vagas
+
+O workflow `.github/workflows/collect-jobs.yml` executa a coleta diariamente às 11:00 UTC (08:00 em Curitiba no horário UTC-3) e também pode ser executado manualmente em **Actions → Atualizar vagas automaticamente → Run workflow**.
+
+Fontes da primeira versão:
+- **Remotive**: vagas remotas com localização explicitamente compatível com Brasil, América Latina ou mundial. A API pública atrasa as listagens em 24 horas e exige atribuição/link para o anúncio original; por isso a aplicação mantém a fonte e o link de cada vaga.
+- **Arbeitnow**: feed público, predominantemente europeu; nesta versão só entram vagas cuja localização indica Brasil, América Latina ou Curitiba/Paraná. É provável que a cobertura local seja limitada.
+
+O coletor grava `data/jobs_feed.json`. O GitHub Actions faz commit do arquivo e a aplicação o lê na aba **Vagas automáticas**. O feed contém apenas dados públicos dos anúncios; dados pessoais e candidaturas permanecem no banco local excluído do Git.
+
+**Limitações:** esta primeira versão não cobre todas as empresas de Curitiba nem plataformas fechadas como LinkedIn/Indeed. Não há garantia de salário: anúncios sem remuneração informada são exibidos como “não informado”, não presumidos como abaixo do piso. A elegibilidade geográfica, o salário e se a vaga continua aberta devem ser confirmados no anúncio original.
