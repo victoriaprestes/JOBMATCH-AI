@@ -214,17 +214,15 @@ def is_targeted_affirmative_vacancy(title, description):
         r"(?:pcd|pessoas? com deficiencia|pessoas? negras?|negros?|"
         r"pretos?|populacao negra|profissionais negros?|candidatos negros?)"
     )
-    # O anúncio pode escrever "exclusiva para pessoas com deficiência",
-    # "vaga afirmativa para pessoas negras", ou colocar o público antes/depois.
     exclusive = (
         r"(?:exclusiv[oa]s?|somente|apenas|reservad[oa]s?|"
         r"afirmativ[oa]s?|destinad[oa]s?|voltad[oa]s?)"
     )
     patterns = (
-        rf"\\b{exclusive}\\b.{{0,100}}\\b(?:para\\s+)?{target}\\b",
-        rf"\\b{target}\\b.{{0,100}}\\b{exclusive}\\b",
-        rf"\\b(?:vaga|vagas|oportunidade|oportunidades)\\b.{{0,100}}\\b{exclusive}\\b.{{0,100}}\\b{target}\\b",
-        rf"\\b(?:pcd|pessoa com deficiencia|pessoas com deficiencia)\\b.{{0,80}}\\b(?:exclusiv[oa]|reservad[oa]|afirmativ[oa])\\b",
+        rf"\b{exclusive}\b.{{0,100}}\b(?:para\s+)?{target}\b",
+        rf"\b{target}\b.{{0,100}}\b{exclusive}\b",
+        rf"\b(?:vaga|vagas|oportunidade|oportunidades)\b.{{0,100}}\b{exclusive}\b.{{0,100}}\b{target}\b",
+        rf"\b(?:pcd|pessoa com deficiencia|pessoas com deficiencia)\b.{{0,80}}\b(?:exclusiv[oa]|reservad[oa]|afirmativ[oa])\b",
     )
     return any(re.search(pattern, text, re.I) for pattern in patterns)
 
