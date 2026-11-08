@@ -14,15 +14,15 @@ Aplicação pessoal para encontrar vagas de entrada no Brasil, avaliar aderênci
 
 ## Fontes e limitações
 
-A coleta usa a API pública de vagas da Empregare (com busca por cidades, modalidade e país) e os feeds públicos de Remotive, RemoteOK e Arbeitnow. O filtro geográfico é deliberadamente conservador: anúncios sem confirmação explícita de Brasil não entram no feed.
+A coleta usa a busca pública do portal Gupy (endpoint não documentado, usado pela busca do próprio portal) e os feeds públicos de Remotive, RemoteOK e Arbeitnow. O filtro geográfico é deliberadamente conservador: anúncios sem confirmação explícita de Brasil não entram no feed.
 
-A cobertura é parcial. Esta versão **não** integra LinkedIn, Gupy, Indeed nem todas as páginas de carreira das empresas. A API da Empregare permite buscar oportunidades presenciais/híbridas na região metropolitana de Curitiba e remotas no Brasil; as outras fontes conectadas têm predominância de vagas remotas. A quantidade de resultados depende da cobertura de cada fonte. Não se deve interpretar ausência de resultados como ausência de vagas no mercado.
+A cobertura é parcial. Esta versão **não** integra LinkedIn, Gupy, Indeed nem todas as páginas de carreira das empresas. A busca da Gupy consulta cargos por palavra-chave, modalidade e estado; para vagas locais, o filtro final restringe a Curitiba e região metropolitana. Como a API não oferece filtro de país, vagas remotas só entram quando o anúncio identifica Brasil. O endpoint é público e sem autenticação, mas não é uma API de busca oficialmente documentada pela Gupy e pode mudar. A quantidade de resultados depende da cobertura de cada fonte. Não se deve interpretar ausência de resultados como ausência de vagas no mercado.
 
-O sistema não confirma por conta própria se a contratação é CLT, se benefícios estão disponíveis ou se a empresa aceita todos os estados brasileiros. Esses itens devem ser conferidos no anúncio original. Salário em moeda estrangeira não é convertido para simular remuneração brasileira.
+O sistema não confirma por conta própria se a contratação é CLT ou se benefícios estão disponíveis. Na Gupy, o tipo Efetivo é mostrado como regime CLT a confirmar; nas demais fontes, o vínculo pode não estar informado. Esses itens devem ser conferidos no anúncio original. Salário em moeda estrangeira não é convertido para simular remuneração brasileira.
 
 ## Automação
 
-O workflow .github/workflows/collect-jobs.yml executa diariamente às 08:00 no horário de Curitiba (11:00 UTC) e pode ser acionado manualmente em Actions → Atualizar vagas automaticamente → Run workflow.
+O workflow .github/workflows/collect-jobs.yml executa diariamente às 08:00 no horário de Curitiba (11:00 UTC), também roda após alterações no coletor e pode ser acionado manualmente em Actions → Atualizar vagas automaticamente → Run workflow.
 
 O GitHub Actions baixa o repositório, instala dependências, consulta os feeds, aplica filtros de país/cargo/senioridade, remove duplicatas e atualiza data/jobs_feed.json. O Streamlit lê o feed atualizado. O banco de candidaturas pessoais permanece local e não é publicado.
 
