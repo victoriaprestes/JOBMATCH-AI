@@ -275,8 +275,14 @@ def empregare():
                 location = "Remoto - Brasil"
                 mode_hint = "Remoto"
             else:
-                location = ", ".join(str(city) for city in city_names) or "Paraná"
-                location += ", Paraná, Brasil"
+                allowed_cities = {
+                    "curitiba", "colombo", "sao jose dos pinhais",
+                    "pinhais", "araucaria", "campo largo",
+                }
+                matching_cities = [str(city) for city in city_names if normalize(city) in allowed_cities]
+                if not matching_cities:
+                    continue
+                location = ", ".join(matching_cities) + ", Paraná, Brasil"
                 mode_text = normalize(item.get("trabalhoRemotoTexto") or "")
                 if "hibrid" in mode_text:
                     mode_hint = "Híbrido"
