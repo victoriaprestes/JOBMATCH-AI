@@ -273,6 +273,8 @@ def gupy():
     """Busca ampla no endpoint público usado pela busca do portal Gupy."""
     api = "https://portal.gupy.io/api/job-search/jobs"
     keywords = [
+        "assistente",
+        "analista",
         "assistente administrativo",
         "assistente de operações",
         "assistente de projetos",
