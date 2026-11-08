@@ -34,6 +34,50 @@ with st.sidebar:
 
 tab0, tab1, tab2, tab3 = st.tabs(["🔎 Vagas automáticas", "📋 Minhas vagas", "➕ Cadastrar vaga", "📦 Importar / exportar"])
 
+with tab0:
+    st.subheader("Oportunidades encontradas automaticamente")
+    import json
+    from pathlib import Path
+    feed_path = Path("data/jobs_feed.json")
+    try:
+        feed = json.loads(feed_path.read_text(encoding="utf-8")) if feed_path.exists() else {}
+    except Exception as exc:
+        feed = {}
+        st.error(f"Não foi possível ler o feed: {exc}")
+    if not feed:
+        st.info("A coleta ainda não foi executada. Acesse GitHub → Actions → Atualizar vagas automaticamente → Run workflow para iniciar a primeira busca. Depois, a coleta será diária.")
+    else:
+        st.caption(f"Última atualização: {feed.get('updated_at','não informada')} · {feed.get('count',0)} vagas no feed")
+        if feed.get("errors"):
+            st.warning("Algumas fontes não responderam: " + " | ".join(feed["errors"]))
+        automatic = feed.get("jobs", [])
+        query = st.text_input("Pesquisar cargo, empresa ou competência", key="auto_search").lower()
+        remote_only = st.checkbox("Somente vagas remotas", value=False, key="auto_remote")
+        visible = []
+        for job in automatic:
+            hay = " ".join([job.get("title",""), job.get("company",""), job.get("description","")]).lower()
+            if query and query not in hay:
+                continue
+            if remote_only and job.get("work_mode") != "Remoto":
+                continue
+            visible.append(job)
+        st.write(f"**{len(visible)} oportunidade(s) encontradas**")
+        for job in visible:
+            score, matched, missing = score_job(job.get("description",""))
+            with st.container(border=True):
+                left, right = st.columns([5,1])
+                left.markdown(f"**{job.get('title','Cargo')} — {job.get('company','Empresa')}**")
+                left.caption(f"{job.get('location','Local não informado')} · {job.get('work_mode','Modalidade não informada')} · Fonte: {job.get('source','')}")
+                left.write("Salário: " + str(job.get("salary_label") or "não informado"))
+                right.metric("Match", f"{score}%")
+                if job.get("url"):
+                    left.markdown(f"[Ver anúncio na fonte original]({job['url']})")
+                with st.expander("Descrição e análise"):
+                    st.write(job.get("description","Descrição não disponível"))
+                    st.write("**Competências encontradas:** " + (", ".join(matched) if matched else "Não identificadas"))
+                    st.caption("Pontuação lexical ponderada; não representa probabilidade de contratação.")
+        st.caption("Fontes: Remotive e Arbeitnow. Confira elegibilidade geográfica, salário e disponibilidade no anúncio original.")
+
 with tab2:
     st.subheader("Adicionar oportunidade")
     with st.form("new_job", clear_on_submit=True):
