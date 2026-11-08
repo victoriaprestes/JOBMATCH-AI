@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import requests
 import streamlit as st
 
 from src.database import init_db, add_job, get_jobs, update_status, delete_job, export_jobs, import_jobs
@@ -38,10 +39,20 @@ with tab0:
     st.subheader("Oportunidades encontradas automaticamente")
     feed_path = Path("data/jobs_feed.json")
     try:
-        feed = json.loads(feed_path.read_text(encoding="utf-8")) if feed_path.exists() else {}
-    except Exception as exc:
-        feed = {}
-        st.error(f"Não foi possível ler o feed: {exc}")
+        # O feed é atualizado pelo GitHub Actions. Busca sempre a versão pública
+        # mais recente para que o Codespace não dependa de um git pull diário.
+        response = requests.get(
+            "https://raw.githubusercontent.com/victoriaprestes/JOBMATCH-AI/main/data/jobs_feed.json",
+            timeout=8,
+        )
+        response.raise_for_status()
+        feed = response.json()
+    except Exception:
+        try:
+            feed = json.loads(feed_path.read_text(encoding="utf-8")) if feed_path.exists() else {}
+        except Exception as exc:
+            feed = {}
+            st.error(f"Não foi possível ler o feed local ou remoto: {exc}")
 
     if not feed:
         st.info("A coleta ainda não foi executada. O GitHub Actions fará a busca diária; também é possível iniciá-la manualmente na aba Actions do repositório.")
