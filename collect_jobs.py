@@ -412,7 +412,7 @@ def main():
             "salary_floor_brl": 3000,
             "salary_policy": "Vagas sem salário informado são mantidas e identificadas; somente valores explicitamente em BRL são comparados ao piso",
         },
-        "coverage_note": "Cobertura parcial dos feeds públicos listados. Não inclui integração com LinkedIn, Gupy, Indeed nem páginas de carreira não conectadas.",
+        "coverage_note": "Cobertura parcial. Inclui busca pública Gupy e feeds Remotive, RemoteOK e Arbeitnow; não inclui LinkedIn, Indeed nem todas as páginas de carreira das empresas.",
         "jobs": ordered,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
