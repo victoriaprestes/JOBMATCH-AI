@@ -32,7 +32,7 @@ with st.sidebar:
     min_salary = st.number_input("Salário mínimo (R$)", min_value=0, value=3000, step=250)
     work_modes = st.multiselect("Modalidade", ["Híbrido", "Presencial", "Remoto"], default=["Híbrido", "Presencial", "Remoto"])
 
-tab1, tab2, tab3 = st.tabs(["📋 Minhas vagas", "➕ Cadastrar vaga", "📦 Importar / exportar"])
+tab0, tab1, tab2, tab3 = st.tabs(["🔎 Vagas automáticas", "📋 Minhas vagas", "➕ Cadastrar vaga", "📦 Importar / exportar"])
 
 with tab2:
     st.subheader("Adicionar oportunidade")
