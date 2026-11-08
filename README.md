@@ -14,9 +14,9 @@ Aplicação pessoal para encontrar vagas de entrada no Brasil, avaliar aderênci
 
 ## Fontes e limitações
 
-A coleta usa os feeds públicos de Remotive, RemoteOK e Arbeitnow. O filtro geográfico é deliberadamente conservador: anúncios sem confirmação explícita de Brasil não entram no feed.
+A coleta usa a API pública de vagas da Empregare (com busca por cidades, modalidade e país) e os feeds públicos de Remotive, RemoteOK e Arbeitnow. O filtro geográfico é deliberadamente conservador: anúncios sem confirmação explícita de Brasil não entram no feed.
 
-A cobertura é parcial. Esta versão **não** integra LinkedIn, Gupy, Indeed nem todas as páginas de carreira das empresas. Os feeds conectados têm predominância de vagas remotas; portanto, podem retornar poucas ou nenhuma vaga presencial/híbrida de Curitiba. Não se deve interpretar ausência de resultados como ausência de vagas no mercado.
+A cobertura é parcial. Esta versão **não** integra LinkedIn, Gupy, Indeed nem todas as páginas de carreira das empresas. A API da Empregare permite buscar oportunidades presenciais/híbridas na região metropolitana de Curitiba e remotas no Brasil; as outras fontes conectadas têm predominância de vagas remotas. A quantidade de resultados depende da cobertura de cada fonte. Não se deve interpretar ausência de resultados como ausência de vagas no mercado.
 
 O sistema não confirma por conta própria se a contratação é CLT, se benefícios estão disponíveis ou se a empresa aceita todos os estados brasileiros. Esses itens devem ser conferidos no anúncio original. Salário em moeda estrangeira não é convertido para simular remuneração brasileira.
 
