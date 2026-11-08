@@ -106,10 +106,24 @@ with tab0:
             -j.get("_score", 0),
             j.get("published_at") or "",
         ))
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Vagas elegíveis", len(visible))
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Vagas no filtro", len(visible))
         c2.metric("Perfil atual", sum(j.get("role_group") == PROFILE_GROUP for j in visible))
         c3.metric("Trilha de transição", sum(j.get("role_group") == TRANSITION_GROUP for j in visible))
+        c4.metric(
+            "Piso confirmado",
+            sum(
+                j.get("salary_min_brl_monthly") is not None
+                and j.get("salary_min_brl_monthly") >= min_salary
+                for j in visible
+            ),
+        )
+        unknown_salary_count = sum(j.get("salary_min_brl_monthly") is None for j in visible)
+        if unknown_salary_count:
+            st.caption(
+                f"{unknown_salary_count} vaga(s) sem salário divulgado: não é possível confirmar "
+                f"que atendam ao piso de R$ {min_salary:,.0f}/mês.".replace(",", ".")
+            )
 
         if not visible:
             st.info(
@@ -135,6 +149,8 @@ with tab0:
                     left.caption("O anúncio menciona vaga afirmativa/exclusiva para PCD; confira os critérios de elegibilidade.")
                 salary_label = job.get("salary_label") or "Não informado"
                 low = job.get("salary_min_brl_monthly")
+                if low is None:
+                    salary_label += " — piso salarial não confirmado"
                 high = job.get("salary_max_brl_monthly")
                 if low is not None:
                     salary_label += f" · faixa estimada: R$ {low:,.0f}".replace(",", ".")
