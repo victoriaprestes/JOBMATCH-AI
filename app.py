@@ -137,7 +137,7 @@ with tab0:
             "Vagas sem salário divulgado ficam identificadas separadamente; o sistema não presume que atendam ao piso."
         )
 
-with tab2:
+with tab1:
     st.subheader("Minhas vagas")
     jobs = get_jobs()
     if not jobs:
@@ -208,7 +208,7 @@ with tab2:
                             delete_job(int(job["id"]))
                             st.rerun()
 
-with tab1:
+with tab2:
     st.subheader("Adicionar oportunidade manualmente")
     with st.form("new_job", clear_on_submit=True):
         c1, c2 = st.columns(2)
