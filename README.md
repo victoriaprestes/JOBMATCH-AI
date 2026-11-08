@@ -9,7 +9,7 @@ Aplicação pessoal para encontrar vagas de entrada no Brasil, avaliar aderênci
 - **Senioridade:** assistente/auxiliar/trainee ou vagas júnior/analista I com evidência de nível inicial. Títulos e requisitos sêniores são excluídos.
 - **Trilha de perfil atual:** administrativo, suporte executivo, operações, processos, projetos/PMO, compras, facilities, back office e financeiro corporativo.
 - **Trilha de transição:** governança, governança de TI, IT Operations, IT Service Management, gestão de serviços, controles internos, riscos, compliance, auditoria e PMO/gestão de projetos em nível inicial.
-- **Salário:** piso desejado de R$ 3.000 brutos mensais. Vagas com remuneração em reais abaixo do piso podem ser ocultadas na interface. Vagas sem salário divulgado são identificadas como não confirmadas, nunca tratadas como se atendessem ao piso.
+- **Vínculo e salário:** a busca da Empregare solicita regime CLT; nas demais fontes, o vínculo pode não estar informado e é exibido como não confirmado. O piso desejado é R$ 3.000 brutos mensais. Vagas com remuneração em reais abaixo do piso podem ser ocultadas na interface. Vagas sem salário divulgado são identificadas como não confirmadas, nunca tratadas como se atendessem ao piso.
 - **Compatibilidade:** pontuação heurística baseada em competências conhecidas. A trilha de transição tem indicador de aderência transferível, sem presumir domínio de ITIL, COBIT, governança ou ferramentas ainda não estudadas.
 
 ## Fontes e limitações
