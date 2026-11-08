@@ -128,7 +128,7 @@ def test_extract_marista_style_benefits_heading():
     )
     result = extract_benefits({}, description).lower()
     assert "unimed" in result
-    assert "odontoprev" in result
+    assert "odonto prev" in result
     assert "vale-refeição" in result
     assert "wellhub" in result
     assert "zenklub" in result
@@ -149,7 +149,7 @@ def test_extract_benefits_when_gupy_removes_spaces_between_headings():
     )
     result = extract_benefits({}, description).lower()
     assert "unimed" in result
-    assert "odontoprev" in result
+    assert "odonto prev" in result
     assert "vale-refeição" in result
     assert "wellhub" in result
     assert "zenklub" in result
