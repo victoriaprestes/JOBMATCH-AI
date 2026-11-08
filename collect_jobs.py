@@ -54,7 +54,7 @@ EXCLUDED_TITLE = re.compile(
     r"sales|vendas|inside sales|recruiter|recrutador|designer|customer support|"
     r"service desk|help desk|tier\s*[23]|video annotation|estagio|estágio|"
     r"caixa|loja|shopping|retail|estoque|warehouse|logistica|logistics|"
-    r"recepcionista|front desk|atendimento ao cliente)\b", re.I
+    r"recepcionista|front desk|atendimento ao cliente|temporaria|temporario|temporary)\b", re.I
 )
 
 BRAZIL_TERMS = (
@@ -327,10 +327,10 @@ def gupy():
                 for item in rows:
                     title = item.get("name") or ""
                     company = item.get("careerPageName") or ""
-                    if not company or normalize(company) in {
-                        "confidencial", "empresa confidencial", "pagina de carreira",
-                        "vem fazer parte do time", "carreiras",
-                    }:
+                    company_n = normalize(company).strip(" .!,:;")
+                    if not company or company_n in {
+                        "confidencial", "empresa confidencial", "pagina de carreira", "carreiras",
+                    } or company_n.startswith("vem fazer parte do time"):
                         continue
                     city = item.get("city") or ""
                     state_name = item.get("state") or ""
