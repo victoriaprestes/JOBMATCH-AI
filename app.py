@@ -121,7 +121,7 @@ with tab_auto:
             age_days = (TODAY - posted).days
             # Padrão: hoje até 7 dias. Expansão opcional: até 45 dias,
             # desde que o anúncio continue sendo retornado pela fonte consultada.
-            if age_days < 0 or age_days > (45 if include_older else 7):
+            if age_days < 0 or (age_days >= 7 and not include_older) or (age_days > 45 and include_older):
                 continue
             if job.get("role_group") not in role_groups or job.get("work_mode") not in work_modes:
                 continue
@@ -166,7 +166,7 @@ with tab_auto:
                            j.get("salary_min_brl_monthly") >= min_salary for j in candidates)
 
         st.caption(
-            f"Período exibido: últimos {'45' if include_older else '7'} dias · "
+            f"Período exibido: {'últimos 45 dias' if include_older else 'menos de 7 dias'} · "
             f"{today_count} publicada(s) hoje · {yesterday_count} ontem. "
             "As mais recentes aparecem primeiro."
         )
