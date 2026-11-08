@@ -51,7 +51,9 @@ SENIOR_TITLE = re.compile(
 EXCLUDED_TITLE = re.compile(
     r"\b(developer|desenvolvedor|engineer|engenheiro|data analyst|analista de dados|"
     r"sales|vendas|inside sales|recruiter|recrutador|designer|customer support|"
-    r"service desk|help desk|tier\s*[23]|video annotation|estagio|estágio)\b", re.I
+    r"service desk|help desk|tier\s*[23]|video annotation|estagio|estágio|"
+    r"caixa|loja|shopping|retail|estoque|warehouse|logistica|logistics|"
+    r"recepcionista|front desk|atendimento ao cliente)\b", re.I
 )
 
 BRAZIL_TERMS = (
