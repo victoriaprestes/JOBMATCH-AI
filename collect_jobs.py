@@ -117,10 +117,12 @@ def is_entry_level(title, description):
 
 def classify_role(title):
     title_n = normalize(title)
-    if any(re.search(p, title_n, re.I) for p in PROFILE_ROLE_PATTERNS):
-        return "Perfil atual", "Experiência administrativa, financeira e operacional já demonstrada"
+    # Os cargos específicos de TI/governança/gestão devem ficar na trilha de transição,
+    # mesmo quando também contenham termos como operações ou processos.
     if any(re.search(p, title_n, re.I) for p in TRANSITION_ROLE_PATTERNS):
         return "Trilha de transição", "Área de governança/IT Operations/gestão para desenvolver com estudo"
+    if any(re.search(p, title_n, re.I) for p in PROFILE_ROLE_PATTERNS):
+        return "Perfil atual", "Experiência administrativa, financeira e operacional já demonstrada"
     return None, None
 
 def request_json(url, params=None):
@@ -144,9 +146,9 @@ def parse_brl_salary(label):
     return round(low), round(high), "Faixa bruta mensal estimada em reais; conferir periodicidade"
 
 def make_job(source, item, title, company, location, description, url, published, external_id,
-             salary_label=None, remote_flag=None, employment_type=None):
+             salary_label=None, remote_flag=None, employment_type=None, mode_hint=None):
     role_group, role_note = classify_role(title)
-    mode = classify_mode(location, remote_flag)
+    mode = mode_hint or classify_mode(location, remote_flag)
     salary_min, salary_max, salary_note = parse_brl_salary(salary_label)
     return {
         "source": source,
@@ -232,9 +234,77 @@ def arbeitnow():
         ))
     return jobs
 
+
+def fetch_empregare_pages(params, max_pages=5):
+    jobs = []
+    for page in range(1, max_pages + 1):
+        query = list(params) + [("ItensPagina", 100), ("Pagina", page)]
+        payload = request_json("https://memora.empregare.com/api/pt-br/vagas/buscar-novo", query)
+        model = payload.get("model") or {}
+        jobs.extend(model.get("dados") or [])
+        if page >= int(model.get("totalPaginas") or 1):
+            break
+    return jobs
+
+def empregare():
+    jobs = []
+    # Presencial/híbrido: somente Curitiba e municípios próximos explicitamente filtrados.
+    local_params = [
+        ("Estado", "Paraná"),
+        ("Cidade", "Curitiba"),
+        ("Cidade", "Colombo"),
+        ("Cidade", "São José dos Pinhais"),
+        ("Cidade", "Pinhais"),
+        ("Cidade", "Araucária"),
+        ("Cidade", "Campo Largo"),
+        ("Modalidade", "Presencial"),
+        ("Modalidade", "Híbrido"),
+    ]
+    # Remoto: API filtrada por país, não por localização global.
+    remote_params = [
+        ("Pais", "Brasil"),
+        ("Modalidade", "Remoto"),
+    ]
+    for mode, params in (("Local", local_params), ("Remoto", remote_params)):
+        for item in fetch_empregare_pages(params):
+            title = item.get("titulo") or ""
+            city_names = item.get("cidades") or []
+            if isinstance(city_names, str):
+                city_names = [city_names]
+            if mode == "Remoto":
+                location = "Remoto - Brasil"
+                mode_hint = "Remoto"
+            else:
+                location = ", ".join(str(city) for city in city_names) or "Paraná"
+                location += ", Paraná, Brasil"
+                mode_text = normalize(item.get("trabalhoRemotoTexto") or "")
+                if "hibrid" in mode_text:
+                    mode_hint = "Híbrido"
+                elif item.get("trabalhoRemoto") is True or "remoto" in mode_text:
+                    mode_hint = "Remoto"
+                else:
+                    mode_hint = "Presencial"
+            level = item.get("nivel") or ""
+            summary = item.get("chamada") or ""
+            description = " ".join(str(x) for x in (summary, level) if x)
+            if not keep_job(title, location, description):
+                continue
+            salary = item.get("salario")
+            if isinstance(salary, (int, float)) and salary > 0:
+                salary = f"R$ {salary}"
+            url = item.get("url") or ""
+            if url and not str(url).startswith("http"):
+                url = "https://www.empregare.com/" + str(url).lstrip("/")
+            jobs.append(make_job(
+                "Empregare", item, title, item.get("empresa"), location, description,
+                url, item.get("data") or item.get("timestamp"), item.get("id"),
+                salary, mode_hint == "Remoto", item.get("regime"), mode_hint,
+            ))
+    return jobs
+
 def main():
     jobs, errors = [], []
-    for name, collector in (("Remotive", remotive), ("RemoteOK", remoteok), ("Arbeitnow", arbeitnow)):
+    for name, collector in (("Empregare", empregare), ("Remotive", remotive), ("RemoteOK", remoteok), ("Arbeitnow", arbeitnow)):
         try:
             found = collector()
             jobs.extend(found)
@@ -258,7 +328,7 @@ def main():
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "count": len(ordered),
         "errors": errors,
-        "sources": ["Remotive", "RemoteOK", "Arbeitnow"],
+        "sources": ["Empregare", "Remotive", "RemoteOK", "Arbeitnow"],
         "filters": {
             "country": "Brasil confirmado; vagas globais sem elegibilidade brasileira são excluídas",
             "locations": ["Curitiba e região metropolitana", "Remoto em todo o Brasil"],
