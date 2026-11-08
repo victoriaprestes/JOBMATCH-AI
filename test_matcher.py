@@ -114,3 +114,22 @@ def test_extract_benefits_from_description_sections():
 
     no_benefits = "Responsabilidades: organizar documentos. Requisitos: Excel."
     assert extract_benefits({}, no_benefits) == ""
+
+
+def test_extract_marista_style_benefits_heading():
+    from collect_jobs import extract_benefits
+
+    description = (
+        "Informações adicionaisO que vai encontrar por aqui: "
+        "Plano de Saúde Unimed; Plano Odontológico OdontoPrev; "
+        "Incentivo à Educação; Vale-refeição; Previdência Privada; "
+        "Seguro de Vida; Vale Transporte; Wellhub; Zenklub. "
+        "Salário: a combinar. Horário: segunda a sexta."
+    )
+    result = extract_benefits({}, description).lower()
+    assert "unimed" in result
+    assert "odontoprev" in result
+    assert "vale-refeição" in result
+    assert "wellhub" in result
+    assert "zenklub" in result
+    assert "salário:" not in result
