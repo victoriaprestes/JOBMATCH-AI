@@ -65,9 +65,14 @@ A pontuação atual é uma heurística lexical: procura termos associados ao per
 O workflow `.github/workflows/collect-jobs.yml` executa a coleta diariamente às 11:00 UTC (08:00 em Curitiba no horário UTC-3) e também pode ser executado manualmente em **Actions → Atualizar vagas automaticamente → Run workflow**.
 
 Fontes da primeira versão:
-- **Remotive**: vagas remotas com localização explicitamente compatível com Brasil, América Latina ou mundial. A API pública atrasa as listagens em 24 horas e exige atribuição/link para o anúncio original; por isso a aplicação mantém a fonte e o link de cada vaga.
-- **Arbeitnow**: feed público, predominantemente europeu; nesta versão só entram vagas cuja localização indica Brasil, América Latina ou Curitiba/Paraná. É provável que a cobertura local seja limitada.
+- **Remotive**: vagas remotas; localização global ou regional fica marcada como elegibilidade a confirmar, não como contratação garantida no Brasil.
+- **RemoteOK**: feed público de vagas remotas; anúncios sem indicação de Brasil ficam marcados como globais/não confirmados.
+- **Arbeitnow**: feed público predominantemente europeu; só entram anúncios cuja localização indique Brasil.
+
+O coletor filtra principalmente pelo título do cargo, evitando selecionar vagas apenas porque a descrição menciona palavras genéricas como “business”, “support” ou “data”. Exclui títulos claramente seniores e funções fora do foco. O perfil-alvo inclui operações, processos, administrativo estratégico, projetos/PMO, business analysis e posições iniciais de dados/BI.
 
 O coletor grava `data/jobs_feed.json`. O GitHub Actions faz commit do arquivo e a aplicação o lê na aba **Vagas automáticas**. O feed contém apenas dados públicos dos anúncios; dados pessoais e candidaturas permanecem no banco local excluído do Git.
 
-**Limitações:** esta primeira versão não cobre todas as empresas de Curitiba nem plataformas fechadas como LinkedIn/Indeed. Não há garantia de salário: anúncios sem remuneração informada são exibidos como “não informado”, não presumidos como abaixo do piso. A elegibilidade geográfica, o salário e se a vaga continua aberta devem ser confirmados no anúncio original.
+**Salários:** a coleta preserva o texto original do anúncio. Quando moeda e periodicidade são identificáveis, calcula uma estimativa mensal bruta e, se houver cotação disponível, uma conversão aproximada para reais. Não interpreta remuneração desconhecida como zero nem afirma que uma estimativa estrangeira equivale a salário CLT no Brasil. Valores devem ser conferidos no anúncio original.
+
+**Limitações:** a cobertura ainda é parcial e não inclui integração com plataformas fechadas como LinkedIn, Gupy ou Indeed. Vagas marcadas como “Global — confirmar” ou “América Latina — confirmar” não têm elegibilidade brasileira garantida. A disponibilidade, o vínculo (CLT/PJ/contractor), o salário e a possibilidade de contratação no Brasil devem ser confirmados na página da vaga.
