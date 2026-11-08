@@ -152,32 +152,64 @@ def parse_brl_salary(label):
     return round(low), round(high), "Faixa bruta mensal estimada em reais; conferir periodicidade"
 
 def extract_benefits(item, description):
-    """Extrai benefícios declarados pela fonte ou por seção explícita do anúncio."""
+    """Extrai benefícios estruturados ou a seção de benefícios da descrição."""
     raw = item.get("benefits") or item.get("benefit") or item.get("perks")
     values = []
     if isinstance(raw, list):
-        values = [clean(x.get("name") or x.get("title") or x) if isinstance(x, (dict, str)) else "" for x in raw]
+        values = [
+            clean(x.get("name") or x.get("title") or "") if isinstance(x, dict)
+            else clean(x) if isinstance(x, str) else ""
+            for x in raw
+        ]
     elif isinstance(raw, dict):
-        values = [clean(k) + (": " + clean(v) if isinstance(v, str) and v.strip() else "") for k, v in raw.items()]
+        values = [
+            clean(k) + (": " + clean(v) if isinstance(v, str) and v.strip() else "")
+            for k, v in raw.items()
+        ]
     elif isinstance(raw, str):
-        values = [clean(x) for x in re.split(r"[;|•\\n]", raw) if clean(x)]
+        values = [clean(x) for x in re.split(r"[;|•\n]+", raw) if clean(x)]
     values = [x for x in values if x]
     if values:
         return "; ".join(dict.fromkeys(values))[:1200]
-    # Fallback conservador: só captura o trecho quando o anúncio tem um cabeçalho de benefícios.
-    text = clean(description)
-    match = re.search(
-        r"(?:benef[ií]cios|benefits|o que oferecemos|what we offer|perks)\\s*[:\\-]?\\s*(.{0,1400})",
-        text, re.I
+
+    text = str(description or "")
+    # Normaliza HTML e separadores sem remover o conteúdo da descrição.
+    text = re.sub(r"(?i)<br\s*/?>|</(?:p|li|div|h[1-6])\s*>", "\n", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html.unescape(text)
+    text = re.sub(r"[ \t\r\f\v]+", " ", text)
+    text = re.sub(r"\n{2,}", "\n", text)
+
+    header = re.compile(
+        r"(?i)(?:^|\n|\s)(benef[ií]cios|benefits|"
+        r"o\s+que\s+oferecemos|what\s+we\s+offer|"
+        r"nosso\s+pacote\s+de\s+benef[ií]cios|"
+        r"benef[ií]cios\s+e\s+vantagens)\s*[:\-]?\s*"
     )
-    if not match:
+    matches = list(header.finditer(text))
+    if not matches:
         return ""
-    section = match.group(1)
-    section = re.split(
-        r"\\b(?:requisitos|qualifica[cç][oõ]es|responsabilidades|sobre a vaga|about the role|requirements)\\b",
-        section, maxsplit=1, flags=re.I
-    )[0]
-    return section[:1000].strip(" .;:-")
+
+    sections = []
+    stop_header = re.compile(
+        r"(?i)(?:^|\n|\s)(?:requisitos(?:\s+e\s+qualifica[cç][oõ]es)?|"
+        r"qualifica[cç][oõ]es|responsabilidades(?:\s+e\s+atribui[cç][oõ]es)?|"
+        r"sobre\s+a\s+vaga|sobre\s+n[oó]s|about\s+the\s+role|"
+        r"requirements|etapas\s+do\s+processo|"
+        r"inform[aá][cç][oõ]es\s+adicionais)\s*[:\-]?\s*"
+    )
+    for match in matches:
+        start = match.end()
+        stop = stop_header.search(text, start)
+        end = stop.start() if stop else min(len(text), start + 1800)
+        section = text[start:end].strip(" \n\t:;.-")
+        if section:
+            sections.append(section)
+    if not sections:
+        return ""
+    # Deduplica se o anúncio repetir o mesmo bloco.
+    result = " | ".join(dict.fromkeys(sections))
+    return clean(result)[:1200]
 
 def make_job(source, item, title, company, location, description, url, published, external_id,
              salary_label=None, remote_flag=None, employment_type=None, mode_hint=None):
