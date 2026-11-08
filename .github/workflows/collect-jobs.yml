@@ -42,9 +42,24 @@ jobs:
         run: python collect_jobs.py
       - name: Salvar feed atualizado
         run: |
+          cp data/jobs_feed.json /tmp/jobs_feed.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f data/jobs_feed.json
-          git diff --cached --quiet || git commit -m "chore: atualizar feed de vagas"
-          git pull --rebase origin main
-          git push
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p data
+            cp /tmp/jobs_feed.json data/jobs_feed.json
+            git add -f data/jobs_feed.json
+            if git diff --cached --quiet; then
+              echo "Feed já está atualizado."
+              exit 0
+            fi
+            git commit -m "chore: atualizar feed de vagas"
+            if git push; then
+              exit 0
+            fi
+            echo "Push concorrente; tentando novamente ($attempt/3)."
+            sleep 2
+          done
+          exit 1
