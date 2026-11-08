@@ -15,7 +15,7 @@ WEIGHTS = {
 def normalize(value):
     value=unicodedata.normalize("NFKD",str(value).lower())
     value="".join(c for c in value if not unicodedata.combining(c))
-    return re.sub(r"\\s+"," ",value)
+    return re.sub(r"\s+"," ",value)
 
 def score_job(description):
     text=normalize(description)
