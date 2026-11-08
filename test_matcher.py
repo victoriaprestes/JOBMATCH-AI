@@ -86,3 +86,31 @@ def test_exclude_exclusive_affirmative_vacancies():
         "ASSISTENTE ADMINISTRATIVO | EXCLUSIVA PARA PESSOAS COM DEFICIÊNCIA",
         "Curitiba, Paraná", "Rotinas de compras."
     )
+
+
+def test_extract_benefits_from_description_sections():
+    from collect_jobs import extract_benefits
+
+    marista_like = (
+        "Responsabilidades e atribuições: acompanhar cursos. "
+        "Informações adicionais: "
+        "O que oferecemos: Plano de saúde, vale-refeição, "
+        "vale-transporte, seguro de vida e bolsa de estudos. "
+        "Requisitos e qualificações: Ensino superior cursando."
+    )
+    result = extract_benefits({}, marista_like).lower()
+    assert "plano de saúde" in result
+    assert "vale-refeição" in result
+    assert "seguro de vida" in result
+
+    explicit_header = (
+        "Atividades da vaga. Benefícios: Plano odontológico; "
+        "Vale alimentação; Gympass. Requisitos: Excel."
+    )
+    result = extract_benefits({}, explicit_header).lower()
+    assert "plano odontológico" in result
+    assert "vale alimentação" in result
+    assert "gympass" in result
+
+    no_benefits = "Responsabilidades: organizar documentos. Requisitos: Excel."
+    assert extract_benefits({}, no_benefits) == ""
