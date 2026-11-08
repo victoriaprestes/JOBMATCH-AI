@@ -206,7 +206,26 @@ def make_job(source, item, title, company, location, description, url, published
         "external_id": str(external_id or url or title),
     }
 
+
+def is_targeted_affirmative_vacancy(title, description):
+    """Exclui anúncios reservados/afirmativos para PCD ou pessoas negras."""
+    text = normalize(f"{title} {description}")
+    target = (
+        r"(?:pcd|pessoas? com deficiencia|pessoas? negras?|negros?|"
+        r"pretos?|populacao negra|profissionais negros?|candidatos negros?)"
+    )
+    qualifier = r"(?:exclusiv[oa]s?|somente|apenas|reservad[oa]s?|afirmativ[oa]s?|destinad[oa]s?)"
+    patterns = (
+        rf"\b(?:vaga|vagas|oportunidade|oportunidades)\b.{{0,100}}\b{qualifier}\b.{{0,80}}\b{target}\b",
+        rf"\b{qualifier}\b.{{0,80}}\b(?:vaga|vagas|oportunidade|oportunidades)?\b.{{0,40}}\b{target}\b",
+        rf"\b{target}\b.{{0,80}}\b(?:vaga|vagas|oportunidade|oportunidades)\b.{{0,60}}\b{qualifier}\b",
+        rf"\b(?:somente|apenas|exclusiv[oa]mente)\b.{{0,60}}\b{target}\b",
+    )
+    return any(re.search(pattern, text, re.I) for pattern in patterns)
+
 def keep_job(title, location, description):
+    if is_targeted_affirmative_vacancy(title, description):
+        return False
     eligibility, _ = classify_location(location)
     if eligibility != "Brasil confirmado":
         return False
