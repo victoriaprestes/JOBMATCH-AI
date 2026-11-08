@@ -268,7 +268,9 @@ def empregare():
         ("Regime", "CLT"),
     ]
     for mode, params in (("Local", local_params), ("Remoto", remote_params)):
-        for item in fetch_empregare_pages(params):
+        source_items = fetch_empregare_pages(params)
+        print(f"Empregare {mode}: {len(source_items)} anúncio(s) retornado(s) pela API.")
+        for item in source_items:
             title = item.get("titulo") or ""
             city_names = item.get("cidades") or []
             if isinstance(city_names, str):
