@@ -178,6 +178,8 @@ def extract_benefits(item, description):
     text = re.sub(r"<[^>]+>", " ", text)
     text = html.unescape(text)
     text = re.sub(r"[ \t\r\f\v]+", " ", text)
+    # Algumas páginas Gupy removem o espaço entre títulos ao limpar HTML.
+    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
     text = re.sub(r"\n{2,}", "\n", text)
 
     header = re.compile(
